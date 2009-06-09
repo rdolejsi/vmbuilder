@@ -59,7 +59,7 @@ class Disk(object):
             self.filename = filename
         else:
             if self.preallocated:
-                raise VMBuilderException('Preallocated was set, but no filename given')
+                raise VMBuilderUserError('Preallocated was set, but no filename given')
             self.filename = 'disk%d.img' % len(self.vm.disks)
 
         self.partitions = []
@@ -180,7 +180,7 @@ class Disk(object):
         @type  destdir: string
         @param destdir: Target location of converted disk image
         @type  format: string
-        @param format: The target format (as understood by qemu-img)
+        @param format: The target format (as understood by qemu-img or vdi)
         @rtype:  string
         @return: the name of the converted image
         """
@@ -194,7 +194,10 @@ class Disk(object):
         destfile = '%s/%s.%s' % (destdir, filename, format)
 
         logging.info('Converting %s to %s, format %s' % (self.filename, format, destfile))
-        run_cmd(qemu_img_path(), 'convert', '-O', format, self.filename, destfile)
+        if format == 'vdi':
+            run_cmd(vbox_manager_path(), 'convertfromraw', '-format', 'VDI', self.filename, destfile)
+        else:
+            run_cmd(qemu_img_path(), 'convert', '-O', format, self.filename, destfile)
         os.unlink(self.filename)
         self.filename = os.path.abspath(destfile)
         return destfile
@@ -290,7 +293,7 @@ class Filesystem(object):
             self.uuid = run_cmd('vol_id', '--uuid', self.filename).rstrip()
 
     def mkfs_fstype(self):
-        if self.vm.suite in ['dapper', 'edgy', 'feisty', 'gutsy']:
+        if self.vm.suite in ['dapper', 'edgy', 'feisty', 'gutsy', 'etch']:
             logging.debug('%s: 128 bit inode' % self.vm.suite)
             return { TYPE_EXT2: ['mkfs.ext2', '-F'], TYPE_EXT3: ['mkfs.ext3', '-I 128', '-F'], TYPE_XFS: ['mkfs.xfs'], TYPE_SWAP: ['mkswap'] }[self.type]
         else:
@@ -426,3 +429,10 @@ def qemu_img_path():
             path = '%s%s%s' % (dir, os.path.sep, exe)
             if os.access(path, os.X_OK):
                 return path
+
+def vbox_manager_path():
+    exe = 'VBoxManage'
+    for dir in os.environ['PATH'].split(os.path.pathsep):
+        path = '%s%s%s' % (dir, os.path.sep, exe)
+        if os.access(path, os.X_OK):
+            return path

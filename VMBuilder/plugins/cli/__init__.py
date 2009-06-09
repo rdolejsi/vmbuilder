@@ -1,5 +1,6 @@
 #    Uncomplicated VM Builder
 #    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2009      Bernd Zeimetz <bzed@debian.org>
 #    
 #    See AUTHORS for list of contributors
 #
@@ -23,13 +24,13 @@ import optparse
 import sys
 import textwrap
 import VMBuilder
-import VMBuilder.hypervisor
+from VMBuilder.disk import parse_size
 _ = gettext
 
 
 class CLI(VMBuilder.Frontend):
     arg = 'cli'
-       
+    
     def run(self):
         try:
             next = False
@@ -42,15 +43,16 @@ class CLI(VMBuilder.Frontend):
                     break
 
             vm = VMBuilder.VM(conf)
-            vm.register_setting('--rootsize', metavar='SIZE', type='int', default=4096, help='Size (in MB) of the root filesystem [default: %default]')
-            vm.register_setting('--optsize', metavar='SIZE', type='int', default=0, help='Size (in MB) of the /opt filesystem. If not set, no /opt filesystem will be added.')
-            vm.register_setting('--swapsize', metavar='SIZE', type='int', default=1024, help='Size (in MB) of the swap partition [default: %default]')
+            vm.register_setting('--version', action='callback', callback=self.versioninfo, callback_kwargs={ 'vm' : vm }, help='Show version information')
+            vm.register_setting('--rootsize', metavar='SIZE', default=4096, help='Size (in MB) of the root filesystem [default: %default]')
+            vm.register_setting('--optsize', metavar='SIZE', default=0, help='Size (in MB) of the /opt filesystem. If not set, no /opt filesystem will be added.')
+            vm.register_setting('--swapsize', metavar='SIZE', default=1024, help='Size (in MB) of the swap partition [default: %default]')
             vm.register_setting('--raw', metavar='PATH', type='string', help="Specify a file (or block device) to as first disk image.")
             vm.register_setting('--part', metavar='PATH', type='string', help="Allows to specify a partition table in PATH each line of partfile should specify (root first): \n    mountpoint size \none per line, separated by space, where size is in megabytes. You can have up to 4 virtual disks, a new disk starts on a line containing only '---'. ie: \n    root 2000 \n    /boot 512 \n    swap 1000 \n    --- \n    /var 8000 \n    /var/log 2000")
             self.set_usage(vm)
 
             vm.optparser.disable_interspersed_args()
-            (foo, args) = vm.optparser.parse_args()
+            args = vm.optparser.parse_args()[1]
             self.handle_args(vm, args)
             vm.optparser.enable_interspersed_args()
 
@@ -68,6 +70,10 @@ class CLI(VMBuilder.Frontend):
         except VMBuilder.VMBuilderUserError, e:
             print >> sys.stderr, e
 
+    def versioninfo(self, option, opt, value, parser, vm=None):
+        print '%(major)d.%(minor)d.r%(revno)d' % vm.get_version_info()
+        sys.exit(0)
+
     def set_usage(self, vm):
         vm.optparser.set_usage('%prog hypervisor distro [options]')
         vm.optparser.arg_help = (('hypervisor', vm.hypervisor_help), ('distro', vm.distro_help))
@@ -80,11 +86,14 @@ class CLI(VMBuilder.Frontend):
 
     def set_disk_layout(self, vm):
         if not vm.part:
+            vm.rootsize = parse_size(vm.rootsize)
+            vm.swapsize = parse_size(vm.swapsize)
+            vm.optsize = parse_size(vm.optsize)
             if vm.hypervisor.preferred_storage == VMBuilder.hypervisor.STORAGE_FS_IMAGE:
                 vm.add_filesystem(size='%dM' % vm.rootsize, type='ext3', mntpnt='/')
                 vm.add_filesystem(size='%dM' % vm.swapsize, type='swap', mntpnt=None)
                 if vm.optsize > 0:
-                    vm.add_filesystem(size='%dM' % optsize, type='ext3', mntpnt='/opt')
+                    vm.add_filesystem(size='%dM' % vm.optsize, type='ext3', mntpnt='/opt')
             else:
                 if vm.raw:
                     disk = vm.add_disk(filename=vm.raw, preallocated=True)
@@ -152,22 +161,38 @@ class CLI(VMBuilder.Frontend):
                 disk.add_part(offset, int(pair[1]), 'ext3', pair[0])
             offset += int(pair[1])
 
-class UVB(CLI):
-    arg = 'ubuntu-vm-builder'
+class VB(CLI):
+    arg = 'vb'
+    suites = []
+    distro = ''
 
     def set_usage(self, vm):
         vm.optparser.set_usage('%prog hypervisor suite [options]')
         vm.optparser.arg_help = (('hypervisor', vm.hypervisor_help), ('suite', self.suite_help))
 
     def suite_help(self):
-        return 'Suite. Valid options: %s' % " ".join(VMBuilder.plugins.ubuntu.distro.Ubuntu.suites)
+        return 'Suite. Valid options: %s' % " ".join(self.suites)
 
     def handle_args(self, vm, args):
         if len(args) < 2:
             vm.optparser.error("You need to specify at least the hypervisor type and the suite")
         vm.set_hypervisor(args[0])
-        vm.set_distro('ubuntu')
+        vm.set_distro(self.distro)
         vm.suite = args[1]
  
+class UVB(VB):
+    arg = 'ubuntu-vm-builder'
+    import VMBuilder.plugins.ubuntu as ubuntu
+    suites = ubuntu.distro.Ubuntu.suites
+    distro = 'ubuntu'
+
+class DVB(VB):
+    arg = 'debian-vm-builder'
+    import VMBuilder.plugins.debian as debian
+    suites = debian.distro.Debian.suites
+    distro = 'debian'
+
+
 VMBuilder.register_frontend(CLI)
 VMBuilder.register_frontend(UVB)
+VMBuilder.register_frontend(DVB)

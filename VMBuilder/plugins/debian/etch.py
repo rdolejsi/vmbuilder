@@ -1,6 +1,7 @@
 #
 #    Uncomplicated VM Builder
 #    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2009      Bernd Zeimetz <bzed@debian.org>
 #    
 #    See AUTHORS for list of contributors
 #
@@ -28,14 +29,20 @@ import VMBuilder.disk as disk
 import VMBuilder.suite as suite
 from   VMBuilder.util import run_cmd
 
-class Dapper(suite.Suite):
-    updategrub = "/sbin/update-grub"
-    grubroot = "/lib/grub"
-    valid_flavours = { 'i386' :  ['386', '686', '686-smp', 'k7', 'k7-smp', 'server', 'server-bigiron'],
-                       'amd64' : ['amd64-generic', 'amd64-k8', 'amd64-k8-smp', 'amd64-server', 'amd64-xeon']}
-    default_flavour = { 'i386' : 'server', 'amd64' : 'amd64-server' }
-    disk_prefix = 'hd'
-    xen_kernel_flavour = None
+class Etch(suite.Suite):
+    updategrub = "/usr/sbin/update-grub"
+    grubroot = "/usr/lib/grub"
+
+    valid_flavours = { 'i386' :  ['486', '686', '686-bigmem',
+                                  '686-bigmem-etchnhalf', '686-etchnhalf',
+                                  '686-smp', 'vserver-686'],
+                       'amd64' : ['amd64', 'amd64-etchnhalf', 'amd64-generic',
+                                  'amd64-k8', 'amd64-k8-smp', 'vserver-amd64',
+                                  'vserver-amd64-k8-smp']}
+    
+    default_flavour = { 'i386' : '686-etchnhalf', 'amd64' : 'amd64-etchnhalf' }
+    disk_prefix = 'sd'
+    xen_kernel_flavour = 'xen'
     virtio_net = False
 
     def check_kernel_flavour(self, arch, flavour):
@@ -90,6 +97,9 @@ class Dapper(suite.Suite):
 
         logging.debug("Installing ssh keys")
         self.install_authorized_keys()
+
+        logging.debug("Installing locales")
+        self.install_locales()
 
         logging.debug("Copy host settings")
         self.copy_settings()
@@ -148,7 +158,7 @@ class Dapper(suite.Suite):
         self.update_passwords()
 
     def kernel_name(self):
-        return 'linux-image-%s' % (self.vm.flavour or self.default_flavour[self.vm.arch],)
+        return 'linux-image-2.6-%s' % (self.vm.flavour or self.default_flavour[self.vm.arch],)
 
     def config_network(self):
         self.vm.install_file('/etc/hostname', self.vm.hostname)
@@ -191,7 +201,7 @@ class Dapper(suite.Suite):
 
     def mangle_grub_menu_lst(self):
         bootdev = disk.bootpart(self.vm.disks)
-        run_cmd('sed', '-ie', 's/^# kopt=root=\([^ ]*\)\(.*\)/# kopt=root=\/dev\/hd%s%d\\2/g' % (bootdev.disk.devletters(), bootdev.get_index()+1), '%s/boot/grub/menu.lst' % self.destdir)
+        run_cmd('sed', '-ie', 's/^# kopt=root=\([^ ]*\)\(.*\)/# kopt=root=UUID=%s\\2/g' % bootdev.fs.uuid, '%s/boot/grub/menu.lst' % self.destdir)
         run_cmd('sed', '-ie', 's/^# groot.*/# groot %s/g' % bootdev.get_grub_id(), '%s/boot/grub/menu.lst' % self.destdir)
         run_cmd('sed', '-ie', '/^# kopt_2_6/ d', '%s/boot/grub/menu.lst' % self.destdir)
 
@@ -214,9 +224,9 @@ class Dapper(suite.Suite):
 
     def install_fstab(self):
         if self.vm.hypervisor.preferred_storage == VMBuilder.hypervisor.STORAGE_FS_IMAGE:
-            self.install_from_template('/etc/fstab', 'dapper_fstab_fsimage', { 'fss' : disk.get_ordered_filesystems(self.vm), 'prefix' : self.disk_prefix })
+            self.install_from_template('/etc/fstab', 'etch_fstab_fsimage', { 'fss' : disk.get_ordered_filesystems(self.vm), 'prefix' : self.disk_prefix })
         else:
-            self.install_from_template('/etc/fstab', 'dapper_fstab', { 'parts' : disk.get_ordered_partitions(self.vm.disks), 'prefix' : self.disk_prefix })
+            self.install_from_template('/etc/fstab', 'etch_fstab', { 'parts' : disk.get_ordered_partitions(self.vm.disks), 'prefix' : self.disk_prefix })
 
     def install_device_map(self):
         self.install_from_template('/boot/grub/device.map', 'devicemap', { 'prefix' : self.disk_prefix })
@@ -272,6 +282,10 @@ class Dapper(suite.Suite):
         self.run_in_target('apt-get', '--force-yes', '-y', 'install', 'grub')
         run_cmd('cp', '-a', '%s%s/%s/' % (self.destdir, self.grubroot, self.vm.arch == 'amd64' and 'x86_64-pc' or 'i386-pc'), '%s/boot/grub' % self.destdir) 
 
+
+    def install_locales(self):
+        self.run_in_target('apt-get', '--force-yes', '-y', 'install', 'locales')
+
     def create_devices(self):
         import VMBuilder.plugins.xen
 
@@ -305,16 +319,24 @@ class Dapper(suite.Suite):
             logging.debug("Creating /var/lock in root filesystem")
             os.makedirs('%s/var/lock' % fs.mntpath)
 
+
     def copy_settings(self):
         self.copy_to_target('/etc/default/locale', '/etc/default/locale')
+        csdir = '%s/etc/console-setup' % self.destdir
+        have_cs = os.path.isdir(csdir)
+        if have_cs:
+            shutil.rmtree(csdir)
+            self.copy_to_target('/etc/console-setup', '/etc/console-setup')
+            self.copy_to_target('/etc/default/console-setup', '/etc/default/console-setup')
         self.copy_to_target('/etc/timezone', '/etc/timezone')
-        self.run_in_target('dpkg-reconfigure', '-fnoninteractive', '-pcritical', 'libc6')
-        self.run_in_target('locale-gen', 'en_US')
+        self.run_in_target('dpkg-reconfigure', '-fnoninteractive', '-pcritical', 'tzdata')
+        self.run_in_target('locale-gen', 'en_US.UTF-8')
         if self.vm.lang:
             self.run_in_target('locale-gen', self.vm.lang)
             self.install_from_template('/etc/default/locale', 'locale', { 'lang' : self.vm.lang })
         self.run_in_target('dpkg-reconfigure', '-fnoninteractive', '-pcritical', 'locales')
-        self.run_in_target('dpkg-reconfigure', '-pcritical', 'locales')
+        if have_cs:
+            self.run_in_target('dpkg-reconfigure', '-fnoninteractive', '-pcritical', 'console-setup')
 
     def install_vmbuilder_log(self, logfile, rootdir):
         shutil.copy(logfile, '%s/var/log/vmbuilder-install.log' % (rootdir,))

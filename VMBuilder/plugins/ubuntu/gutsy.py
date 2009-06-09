@@ -18,8 +18,8 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import logging
-import suite
 import VMBuilder.disk as disk
+import VMBuilder.suite as suite
 from   VMBuilder.util import run_cmd
 from   VMBuilder.plugins.ubuntu.feisty import Feisty
 

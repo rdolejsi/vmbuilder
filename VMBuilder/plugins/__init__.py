@@ -20,6 +20,7 @@
 import os
 import VMBuilder
 from VMBuilder.util import run_cmd
+from VMBuilder.exception import VMBuilderException
 
 def load_plugins():
     for plugin in find_plugins():

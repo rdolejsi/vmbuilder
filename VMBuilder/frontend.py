@@ -18,22 +18,20 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #    Frontend interface and classes
-
-import VMBuilder
-import optparse
+from VMBuilder.exception import VMBuilderException
 
 class Frontend(object):
     def __init__(self):
         self.settings = []
 
-    def setting_group(self, help=None):
-        return self.SettingsGroup(help)
+    def setting_group(self, setting_help=None):
+        return self.SettingsGroup(setting_help)
     
     def add_setting_group(self, group):
         self.settings.append(group)
 
     def add_setting(self, **kwargs):
-        self.settings.append(Setting(**kwargs))
+        self.settings.append(self.Setting(**kwargs))
 
     setting_types =  ['store', 'store']
     class Setting(object):
@@ -42,8 +40,8 @@ class Frontend(object):
             self.longarg = kwargs.get('shortarg', None)
             self.default = kwargs.get('default', None)
             self.help = kwargs.get('help', None)
-            type = kwargs.get('type', 'store')
-            if type not in setting_types:
+            store_type = kwargs.get('type', 'store')
+            if store_type not in Frontend.setting_types:
                 raise VMBuilderException("Invalid option type: %s" % type)
 
     class SettingsGroup(Setting):

@@ -21,10 +21,9 @@
 #    The publically exposed bits of VMBuilder
 #
 import logging
-import VMBuilder.plugins
+from   VMBuilder.plugins    import load_plugins, Plugin
 from   VMBuilder.distro     import Distro
 from   VMBuilder.hypervisor import Hypervisor
-from   VMBuilder.plugins    import Plugin
 from   VMBuilder.frontend   import Frontend
 from   VMBuilder.vm         import VM
 from   VMBuilder.exception  import VMBuilderException, VMBuilderUserError
@@ -66,4 +65,4 @@ def run():
     frontend.run()
 
 logging.debug('Loading plugins')
-VMBuilder.plugins.load_plugins()
+load_plugins()

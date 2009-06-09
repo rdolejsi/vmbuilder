@@ -19,12 +19,12 @@
 #
 #    Hypervisor super class
 
-import VMBuilder.plugins
+from VMBuilder import Plugin
 
 STORAGE_DISK_IMAGE = 0
 STORAGE_FS_IMAGE = 1
 
-class Hypervisor(VMBuilder.plugins.Plugin):
+class Hypervisor(Plugin):
     def finalize(self):
         raise NotImplemented('Hypervisor subclasses need to implement the finalize method')
 

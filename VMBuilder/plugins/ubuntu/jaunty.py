@@ -17,9 +17,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import suite
 import logging
 import VMBuilder.disk as disk
+import VMBuilder.suite as suite
 from   VMBuilder.util import run_cmd
 from   VMBuilder.plugins.ubuntu.intrepid import Intrepid
 
@@ -31,3 +31,14 @@ class Jaunty(Intrepid):
         run_cmd('sed', '-ie', 's/^# kopt=root=\([^ ]*\)\(.*\)/# kopt=root=UUID=%s\\2/g' % bootdev.fs.uuid, '%s/boot/grub/menu.lst' % self.destdir)
         run_cmd('sed', '-ie', 's/^# groot.*/# groot=%s/g' % bootdev.fs.uuid, '%s/boot/grub/menu.lst' % self.destdir)
         run_cmd('sed', '-ie', '/^# kopt_2_6/ d', '%s/boot/grub/menu.lst' % self.destdir)
+
+    def update_passwords(self):
+        # Set the user password, using using defaults from /etc/login.defs (ie, no need to specify '-m')
+        self.run_in_target('chpasswd', stdin=('%s:%s\n' % (self.vm.user, getattr(self.vm, 'pass'))))
+
+        # Lock root account only if we didn't set the root password
+        if self.vm.rootpass:
+            self.run_in_target('chpasswd', stdin=('%s:%s\n' % ('root', self.vm.rootpass)))
+        else:
+            self.run_in_target('chpasswd', '-e', stdin='root:!\n')
+

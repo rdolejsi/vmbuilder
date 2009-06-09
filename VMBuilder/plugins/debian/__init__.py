@@ -1,6 +1,7 @@
 #
 #    Uncomplicated VM Builder
 #    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2009      Bernd Zeimetz <bzed@debian.org>
 #    
 #    See AUTHORS for list of contributors
 #
@@ -17,21 +18,4 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#    Distro super class
-from   VMBuilder.util    import run_cmd
-import VMBuilder.plugins
-
-class Distro(VMBuilder.plugins.Plugin):
-    def has_xen_support(self):
-        """Install the distro into destdir"""
-        raise NotImplemented('Distro subclasses need to implement the has_xen_support method')
-    
-    def install(self, destdir):
-        """Install the distro into destdir"""
-        raise NotImplemented('Distro subclasses need to implement the install method')
-
-    def post_mount(self, fs):
-        """Called each time a filesystem is mounted to let the distro add things to the filesystem"""
-
-    def install_vmbuilder_log(self, logfile):
-        """Let the distro copy the install logfile to the guest"""
+import distro

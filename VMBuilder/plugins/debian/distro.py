@@ -1,6 +1,7 @@
 #
 #    Uncomplicated VM Builder
 #    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2009      Bernd Zeimetz <bzed@debian.org>
 #    
 #    See AUTHORS for list of contributors
 #
@@ -26,15 +27,17 @@ from   VMBuilder           import register_distro, Distro
 from   VMBuilder.util      import run_cmd
 from   VMBuilder.exception import VMBuilderUserError, VMBuilderException
 
-class Ubuntu(Distro):
-    name = 'Ubuntu'
-    arg = 'ubuntu'
-    suites = ['dapper', 'gutsy', 'hardy', 'intrepid', 'jaunty']
+class Debian(Distro):
+    name = 'Debian'
+    arg = 'debian'
+    suites = ['etch']
     
     # Maps host arch to valid guest archs
-    valid_archs = { 'amd64' : ['amd64', 'i386', 'lpia' ],
-                    'i386' : [ 'i386', 'lpia' ],
-                    'lpia' : [ 'i386', 'lpia' ] }
+    # FIXME: Running a amd64 kernel with an i386 userspace allows us to run
+    #        amd64 guests
+     
+    valid_archs = { 'amd64' : ['amd64', 'i386' ],
+                    'i386' : [ 'i386' ] }
 
     xen_kernel = ''
 
@@ -46,29 +49,30 @@ class Ubuntu(Distro):
 
         group = self.vm.setting_group('General OS options')
         self.host_arch = run_cmd('dpkg', '--print-architecture').rstrip()
-        group.add_option('-a', '--arch', default=self.host_arch, help='Specify the target architecture.  Valid options: amd64 i386 lpia (defaults to host arch)')
-        group.add_option('--hostname', default='ubuntu', help='Set NAME as the hostname of the guest. Default: ubuntu. Also uses this name as the VM name.')
+        group.add_option('-a', '--arch', default=self.host_arch, help='Specify the target architecture.  Valid options: amd64 i386 (defaults to host arch)')
+        group.add_option('--hostname', default='debian', help='Set NAME as the hostname of the guest. Default: debian. Also uses this name as the VM name.')
         self.vm.register_setting_group(group)
 
+        # FIXME: Add Debian ports 
+        # FIXME: Add volatile
         group = self.vm.setting_group('Installation options')
-        group.add_option('--suite', default='jaunty', help='Suite to install. Valid options: %s [default: %%default]' % ' '.join(self.suites))
+        group.add_option('--suite', default='etch', help='Suite to install. Valid options: %s [default: %%default]' % ' '.join(self.suites))
         group.add_option('--flavour', '--kernel-flavour', help='Kernel flavour to use. Default and valid options depend on architecture and suite')
         group.add_option('--variant', metavar='VARIANT', help='Passed to debootstrap --variant flag; use minbase, buildd, or fakechroot.')
         group.add_option('--iso', metavar='PATH', help='Use an iso image as the source for installation of file. Full path to the iso must be provided. If --mirror is also provided, it will be used in the final sources.list of the vm.  This requires suite and kernel parameter to match what is available on the iso, obviously.')
-        group.add_option('--mirror', metavar='URL', help='Use Ubuntu mirror at URL instead of the default, which is http://archive.ubuntu.com/ubuntu for official arches and http://ports.ubuntu.com/ubuntu-ports otherwise')
+        group.add_option('--mirror', metavar='URL', help='Use Debian mirror at URL instead of the default, which is http://ftp.debian.org for official arches.')
         group.add_option('--proxy', metavar='URL', help='Use proxy at URL for cached packages')
-        group.add_option('--install-mirror', metavar='URL', help='Use Ubuntu mirror at URL for the installation only. Apt\'s sources.list will still use default or URL set by --mirror')
-        group.add_option('--security-mirror', metavar='URL', help='Use Ubuntu security mirror at URL instead of the default, which is http://security.ubuntu.com/ubuntu for official arches and http://ports.ubuntu.com/ubuntu-ports otherwise.')
+        group.add_option('--install-mirror', metavar='URL', help='Use Debian mirror at URL for the installation only. Apt\'s sources.list will still use default or URL set by --mirror')
+        group.add_option('--security-mirror', metavar='URL', help='Use Debian security mirror at URL instead of the default, which is http://security.debian.org/debian-security/ for official arches.')
         group.add_option('--install-security-mirror', metavar='URL', help='Use the security mirror at URL for installation only. Apt\'s sources.list will still use default or URL set by --security-mirror')
-        group.add_option('--components', metavar='COMPS', help='A comma seperated list of distro components to include (e.g. main,universe).')
-        group.add_option('--ppa', metavar='PPA', action='append', help='Add ppa belonging to PPA to the vm\'s sources.list.')
+        group.add_option('--components', metavar='COMPS', help='A comma seperated list of distro components to include (e.g. main,contrib,non-free).')
         group.add_option('--lang', metavar='LANG', default=self.get_locale(), help='Set the locale to LANG [default: %default]')
         self.vm.register_setting_group(group)
 
         group = self.vm.setting_group('Settings for the initial user')
-        group.add_option('--user', default='ubuntu', help='Username of initial user [default: %default]')
-        group.add_option('--name', default='Ubuntu', help='Full name of initial user [default: %default]')
-        group.add_option('--pass', default='ubuntu', help='Password of initial user [default: %default]')
+        group.add_option('--user', default='debian', help='Username of initial user [default: %default]')
+        group.add_option('--name', default='Debian', help='Full name of initial user [default: %default]')
+        group.add_option('--pass', default='debian', help='Password of initial user [default: %default]')
         group.add_option('--rootpass', help='Initial root password (WARNING: this has strong security implications).')
         self.vm.register_setting_group(group)
 
@@ -79,19 +83,19 @@ class Ubuntu(Distro):
 
     def set_defaults(self):
         if not self.vm.mirror:
-            if self.vm.arch == 'lpia':
-                self.vm.mirror = 'http://ports.ubuntu.com/ubuntu-ports'
-            else:
-                self.vm.mirror = 'http://archive.ubuntu.com/ubuntu'
+            #if self.vm.arch == 'lpia':
+            #    self.vm.mirror = 'http://ports.ubuntu.com/ubuntu-ports'
+            #else:
+            self.vm.mirror = 'http://ftp.debian.org/debian'
 
         if not self.vm.security_mirror:
-            if self.vm.arch == 'lpia':
-                self.vm.security_mirror = 'http://ports.ubuntu.com/ubuntu-ports'
-            else:
-                self.vm.security_mirror = 'http://security.ubuntu.com/ubuntu'
+            #if self.vm.arch == 'lpia':
+            #    self.vm.security_mirror = 'http://ports.ubuntu.com/ubuntu-ports'
+            #else:
+            self.vm.security_mirror = 'http://security.debian.org/debian-security'
 
         if not self.vm.components:
-            self.vm.components = ['main', 'restricted', 'universe']
+            self.vm.components = ['main']
         else:
             self.vm.components = self.vm.components.split(',')
 
@@ -106,7 +110,7 @@ class Ubuntu(Distro):
         if not self.vm.suite in self.suites:
             raise VMBuilderUserError('Invalid suite. Valid suites are: %s' % ' '.join(self.suites))
         
-        modname = 'VMBuilder.plugins.ubuntu.%s' % (self.vm.suite, )
+        modname = 'VMBuilder.plugins.debian.%s' % (self.vm.suite, )
         mod = __import__(modname, fromlist=[self.vm.suite])
         self.suite = getattr(mod, self.vm.suite.capitalize())(self.vm)
 
@@ -189,4 +193,4 @@ EOT''')
         return path
 
 
-register_distro(Ubuntu)
+register_distro(Debian)
