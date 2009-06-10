@@ -21,22 +21,32 @@ import logging
 import VMBuilder.disk as disk
 import VMBuilder.suite as suite
 from   VMBuilder.util import run_cmd
-from   VMBuilder.plugins.ubuntu.hardy import Hardy
+from   VMBuilder.plugins.ubuntu.intrepid import Intrepid
 
-class Intrepid(Hardy):
-    valid_flavours = { 'i386' :  ['386', 'generic', 'server', 'virtual'],
-                       'amd64' : ['generic', 'server', 'virtual'],
-                       'lpia'  : ['lpia', 'lpiacompat'] }
-    default_flavour = { 'i386' : 'virtual', 'amd64' : 'virtual', 'lpia' : 'lpia' }
-    xen_kernel_flavour = 'virtual'
+class Jaunty(Intrepid):
+    xen_kernel_flavour = 'server'
 
     def mangle_grub_menu_lst(self):
         bootdev = disk.bootpart(self.vm.disks)
         run_cmd('sed', '-ie', 's/^# kopt=root=\([^ ]*\)\(.*\)/# kopt=root=UUID=%s\\2/g' % bootdev.fs.uuid, '%s/boot/grub/menu.lst' % self.destdir)
         run_cmd('sed', '-ie', 's/^# groot.*/# groot=%s/g' % bootdev.fs.uuid, '%s/boot/grub/menu.lst' % self.destdir)
         run_cmd('sed', '-ie', '/^# kopt_2_6/ d', '%s/boot/grub/menu.lst' % self.destdir)
+
+<<<<<<< HEAD:VMBuilder/plugins/ubuntu/jaunty.py
+    def update_passwords(self):
+        # Set the user password, using using defaults from /etc/login.defs (ie, no need to specify '-m')
+        self.run_in_target('chpasswd', stdin=('%s:%s\n' % (self.vm.user, getattr(self.vm, 'pass'))))
+
+        # Lock root account only if we didn't set the root password
+        if self.vm.rootpass:
+            self.run_in_target('chpasswd', stdin=('%s:%s\n' % ('root', self.vm.rootpass)))
+        else:
+            self.run_in_target('chpasswd', '-e', stdin='root:!\n')
+
+=======
     def install_xen_kernel(self):
 	import VMBuilder.plugins.xen
 
-	if isinstance(self.vm.hypervisor, VMBuilder.plugins.xen.Xen):
-	   logging.info('Skipping Xen kernel installation.')
+  	if isinstance(self.vm.hypervisor, VMBuilder.plugins.xen.Xen):
+	    logging.info('Skipping Xen kernel installation.')
+>>>>>>> vmbuilder_ec2_patches:VMBuilder/plugins/ubuntu/jaunty.py

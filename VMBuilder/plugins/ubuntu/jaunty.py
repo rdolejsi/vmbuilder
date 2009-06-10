@@ -42,3 +42,8 @@ class Jaunty(Intrepid):
         else:
             self.run_in_target('chpasswd', '-e', stdin='root:!\n')
 
+    def install_xen_kernel(self):
+	import VMBuilder.plugins.xen
+
+  	if isinstance(self.vm.hypervisor, VMBuilder.plugins.xen.Xen):
+	    logging.info('Skipping Xen kernel installation.')

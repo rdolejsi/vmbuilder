@@ -44,9 +44,9 @@ class CLI(VMBuilder.Frontend):
 
             vm = VMBuilder.VM(conf)
             vm.register_setting('--version', action='callback', callback=self.versioninfo, callback_kwargs={ 'vm' : vm }, help='Show version information')
-            vm.register_setting('--rootsize', metavar='SIZE', default=4096, help='Size (in MB) of the root filesystem [default: %default]')
-            vm.register_setting('--optsize', metavar='SIZE', default=0, help='Size (in MB) of the /opt filesystem. If not set, no /opt filesystem will be added.')
-            vm.register_setting('--swapsize', metavar='SIZE', default=1024, help='Size (in MB) of the swap partition [default: %default]')
+            vm.register_setting('--rootsize', metavar='SIZE', type='int', default=4096, help='Size (in MB) of the root filesystem [default: %default]')
+            vm.register_setting('--optsize', metavar='SIZE', type='int', default=0, help='Size (in MB) of the /opt filesystem. If not set, no /opt filesystem will be added.')
+            vm.register_setting('--swapsize', metavar='SIZE', type='int', default=1024, help='Size (in MB) of the swap partition [default: %default]')
             vm.register_setting('--raw', metavar='PATH', type='string', help="Specify a file (or block device) to as first disk image.")
             vm.register_setting('--part', metavar='PATH', type='string', help="Allows to specify a partition table in PATH each line of partfile should specify (root first): \n    mountpoint size \none per line, separated by space, where size is in megabytes. You can have up to 4 virtual disks, a new disk starts on a line containing only '---'. ie: \n    root 2000 \n    /boot 512 \n    swap 1000 \n    --- \n    /var 8000 \n    /var/log 2000")
             self.set_usage(vm)

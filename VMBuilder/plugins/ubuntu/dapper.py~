@@ -82,12 +82,15 @@ class Dapper(suite.Suite):
             logging.debug("Creating device.map")
             self.install_device_map()
 
+<<<<<<< HEAD:VMBuilder/plugins/ubuntu/dapper.py
+=======
         logging.debug("Installing ssh keys")
         self.install_authorized_keys()
 
 	logging.debug("Install xen kernel")
 	self.install_xen_kernel()
 
+>>>>>>> vmbuilder_ec2_patches:VMBuilder/plugins/ubuntu/dapper.py
         logging.debug("Installing extra packages")
         self.install_extras()
 
