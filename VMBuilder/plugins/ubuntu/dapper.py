@@ -81,6 +81,9 @@ class Dapper(suite.Suite):
         logging.debug("Installing ssh keys")
         self.install_authorized_keys()
 
+	logging.debug("Install xen kernel")
+	self.install_xen_kernel()
+
         logging.debug("Installing extra packages")
         self.install_extras()
 

@@ -41,11 +41,17 @@ class Firstscripts(Plugin):
         
         if self.vm.firstboot:
             logging.debug("Checking if firstboot script %s exists" % (self.vm.firstboot,))
+	    if not(os.access(self.vm.firstboot, os.X_OK)):
+	        raise MBuilderUserError("The first-boot script is not executable")
+
             if not(os.path.isfile(self.vm.firstboot)):
                 raise VMBuilderUserError('The path to the first-boot script is invalid: %s. Make sure you are providing a full path.' % self.vm.firstboot)
                 
         if self.vm.firstlogin:
             logging.debug("Checking if first login script %s exists" % (self.vm.firstlogin,))
+            if not(os.access(self.vm.firstlogin, os.X_OK)):
+                raise VMBuilderUserError("The first-login script is not executable")
+
             if not(os.path.isfile(self.vm.firstlogin)):
                 raise VMBuilderUserError('The path to the first-login script is invalid: %s.  Make sure you are providing a full path.' % self.vm.firstlogin)
 

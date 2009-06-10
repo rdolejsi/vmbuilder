@@ -9,7 +9,7 @@ deb $security_mirror $suite-security #slurp
 
 #if $ppa
 #for $p in $ppa
-deb http://ppa.launchpad.net/$p/ubuntu $suite #slurp
+deb http://ppa.launchpad.net/$p/ppa/ubuntu $suite #slurp
 #echo ' '.join($components)
 
 #end for

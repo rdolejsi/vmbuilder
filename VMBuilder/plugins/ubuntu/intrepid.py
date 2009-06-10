@@ -24,10 +24,19 @@ from   VMBuilder.util import run_cmd
 from   VMBuilder.plugins.ubuntu.hardy import Hardy
 
 class Intrepid(Hardy):
-    xen_kernel_flavour = 'server'
+    valid_flavours = { 'i386' :  ['386', 'generic', 'server', 'virtual'],
+                       'amd64' : ['generic', 'server', 'virtual'],
+                       'lpia'  : ['lpia', 'lpiacompat'] }
+    default_flavour = { 'i386' : 'virtual', 'amd64' : 'virtual', 'lpia' : 'lpia' }
+    xen_kernel_flavour = 'virtual'
 
     def mangle_grub_menu_lst(self):
         bootdev = disk.bootpart(self.vm.disks)
         run_cmd('sed', '-ie', 's/^# kopt=root=\([^ ]*\)\(.*\)/# kopt=root=UUID=%s\\2/g' % bootdev.fs.uuid, '%s/boot/grub/menu.lst' % self.destdir)
         run_cmd('sed', '-ie', 's/^# groot.*/# groot=%s/g' % bootdev.fs.uuid, '%s/boot/grub/menu.lst' % self.destdir)
         run_cmd('sed', '-ie', '/^# kopt_2_6/ d', '%s/boot/grub/menu.lst' % self.destdir)
+    def install_xen_kernel(self):
+	import VMBuilder.plugins.xen
+
+	if isinstance(self.vm.hypervisor, VMBuilder.plugins.xen.Xen):
+	   logging.info('Skipping Xen kernel installation.')

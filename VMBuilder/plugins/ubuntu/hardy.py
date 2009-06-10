@@ -18,13 +18,24 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import suite
+import logging
+import VMBuilder
+from VMBuilder.util		    import run_cmd
 from VMBuilder.plugins.ubuntu.gutsy import Gutsy
 
 class Hardy(Gutsy):
     virtio_net = True
 
     def xen_kernel_path(self):
-        return '/boot/vmlinuz-2.6.24-19-xen'
+	rcmd = run_cmd('chroot', self.destdir, 'dpkg', '-S', 'xen')
+	temp = rcmd[0].split(": ")
+	xen_kernel = temp[0].split("linux-image-")
+	path = '/boot/vmlinuz-%s' %xen_kernel
+	return path
 
     def xen_ramdisk_path(self):
-        return '/boot/initrd.img-2.6.24-19-xen'
+	rcmd = run_cmd('chroot', self.destdir, 'dpkg', '-S', 'xen')
+	temp = rcmd[0].split(": ")
+	xen_ramdisk = temp[0].split("linux-image-")
+	path = '/boot/initrd.img-%s' %xen_ramdisk
+	return path
