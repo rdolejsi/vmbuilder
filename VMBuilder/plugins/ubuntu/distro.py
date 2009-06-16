@@ -1,13 +1,12 @@
 #
 #    Uncomplicated VM Builder
-#    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2007-2009 Canonical Ltd.
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,14 +16,14 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+import logging
+import os
+import socket
+import types
 import VMBuilder
 from   VMBuilder           import register_distro, Distro
 from   VMBuilder.util      import run_cmd
-from   VMBuilder.exception import VMBuilderUserError
-import socket
-import logging
-import types
-import os
+from   VMBuilder.exception import VMBuilderUserError, VMBuilderException
 
 class Ubuntu(Distro):
     name = 'Ubuntu'
@@ -53,20 +52,27 @@ class Ubuntu(Distro):
         group = self.vm.setting_group('Installation options')
         group.add_option('--suite', default='jaunty', help='Suite to install. Valid options: %s [default: %%default]' % ' '.join(self.suites))
         group.add_option('--flavour', '--kernel-flavour', help='Kernel flavour to use. Default and valid options depend on architecture and suite')
+        group.add_option('--variant', metavar='VARIANT', help='Passed to debootstrap --variant flag; use minbase, buildd, or fakechroot.')
         group.add_option('--iso', metavar='PATH', help='Use an iso image as the source for installation of file. Full path to the iso must be provided. If --mirror is also provided, it will be used in the final sources.list of the vm.  This requires suite and kernel parameter to match what is available on the iso, obviously.')
         group.add_option('--mirror', metavar='URL', help='Use Ubuntu mirror at URL instead of the default, which is http://archive.ubuntu.com/ubuntu for official arches and http://ports.ubuntu.com/ubuntu-ports otherwise')
+        group.add_option('--proxy', metavar='URL', help='Use proxy at URL for cached packages')
         group.add_option('--install-mirror', metavar='URL', help='Use Ubuntu mirror at URL for the installation only. Apt\'s sources.list will still use default or URL set by --mirror')
         group.add_option('--security-mirror', metavar='URL', help='Use Ubuntu security mirror at URL instead of the default, which is http://security.ubuntu.com/ubuntu for official arches and http://ports.ubuntu.com/ubuntu-ports otherwise.')
         group.add_option('--install-security-mirror', metavar='URL', help='Use the security mirror at URL for installation only. Apt\'s sources.list will still use default or URL set by --security-mirror')
         group.add_option('--components', metavar='COMPS', help='A comma seperated list of distro components to include (e.g. main,universe).')
         group.add_option('--ppa', metavar='PPA', action='append', help='Add ppa belonging to PPA to the vm\'s sources.list.')
         group.add_option('--lang', metavar='LANG', default=self.get_locale(), help='Set the locale to LANG [default: %default]')
+        group.add_option('--timezone', action='store_true', help='Set the timezone to the vm.')
         self.vm.register_setting_group(group)
 
         group = self.vm.setting_group('Settings for the initial user')
         group.add_option('--user', default='ubuntu', help='Username of initial user [default: %default]')
         group.add_option('--name', default='Ubuntu', help='Full name of initial user [default: %default]')
         group.add_option('--pass', default='ubuntu', help='Password of initial user [default: %default]')
+        group.add_option('--rootpass', help='Initial root password (WARNING: this has strong security implications).')
+        group.add_option('--uid', help='Initial UID value.')
+        group.add_option('--gid', help='Initial GID value.')
+        group.add_option('--lock-user', action='store_true', help='Lock the initial user [default %default]')
         self.vm.register_setting_group(group)
 
         group = self.vm.setting_group('Other options')
@@ -93,10 +99,7 @@ class Ubuntu(Distro):
             self.vm.components = self.vm.components.split(',')
 
     def get_locale(self):
-        try:
-            return os.environ['LANG']
-        except:
-            return None
+        return os.getenv('LANG')
 
     def preflight_check(self):
         """While not all of these are strictly checks, their failure would inevitably
@@ -126,9 +129,23 @@ class Ubuntu(Distro):
 
         self.vm.virtio_net = self.use_virtio_net()
 
+        if self.vm.lang:
+            try:
+                run_cmd('locale-gen', '%s' % self.vm.lang)
+            except VMBuilderException, e:
+                msg = "locale-gen does not recognize your locale '%s'" % self.vm.lang
+                raise VMBuilderUserError(msg)
+
+        if self.vm.ec2:
+            self.get_ec2_kernel()
+            self.get_ec2_ramdisk()
+
     def install(self, destdir):
         self.destdir = destdir
         self.suite.install(destdir)
+
+    def install_vmbuilder_log(self, logfile, rootdir):
+        self.suite.install_vmbuilder_log(logfile, rootdir)
 
     def post_mount(self, fs):
         self.suite.post_mount(fs)
@@ -170,13 +187,29 @@ EOT''')
         else:
             raise VMBuilderUserError('There is no valid xen kernel for the suite selected.')
 
-    def xen_kernel_path(self):
-        path = '/boot/vmlinuz-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour)
+    def xen_kernel_initrd_path(self, which):
+        path = '/boot/%s-%s-%s' % (which, self.xen_kernel_version(), self.suite.xen_kernel_flavour)
         return path
+
+    def xen_kernel_path(self):
+        return self.xen_kernel_initrd_path('kernel')
 
     def xen_ramdisk_path(self):
-        path = '/boot/initrd.img-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour)
-        return path
+        return self.xen_kernel_initrd_path('ramdisk')
 
+    def get_ec2_kernel(self):
+        if self.suite.ec2_kernel_info:
+            return self.suite.ec2_kernel_info[self.vm.arch]
+        else:
+            raise VMBuilderUserError('EC2 is not supported for the suite selected')
+
+    def get_ec2_ramdisk(self):
+        if self.suite.ec2_ramdisk_info:
+            return self.suite.ec2_ramdisk_info[self.vm.arch]
+        else:
+            raise VMBuilderUserError('EC2 is not supported for the suite selected')
+
+    def disable_hwclock_access(self):
+        return self.suite.disable_hwclock_access()
 
 register_distro(Ubuntu)

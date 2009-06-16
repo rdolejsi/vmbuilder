@@ -1,13 +1,12 @@
 #
 #    Uncomplicated VM Builder
-#    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2007-2009 Canonical Ltd.
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -29,6 +28,7 @@ import tempfile
 import textwrap
 import socket
 import struct
+import urllib
 import VMBuilder
 import VMBuilder.util      as util
 import VMBuilder.log       as log
@@ -75,7 +75,7 @@ class VM(object):
 
         self.fsmounted = False
 
-        self.optparser = _MyOptParser(epilog="ubuntu-vm-builder is Copyright (C) 2007-2008 Canonical Ltd. and written by Soren Hansen <soren@canonical.com>.", usage='%prog hypervisor distro [options]')
+        self.optparser = _MyOptParser(epilog="ubuntu-vm-builder is Copyright (C) 2007-2009 Canonical Ltd. and written by Soren Hansen <soren@canonical.com>.", usage='%prog hypervisor distro [options]')
         self.optparser.arg_help = (('hypervisor', self.hypervisor_help), ('distro', self.distro_help))
 
         self.confparser = ConfigParser.SafeConfigParser()
@@ -90,6 +90,15 @@ class VM(object):
 
         self._register_base_settings()
 
+        self.add_clean_cmd('rm', log.logfile)
+
+    def get_version_info(self):
+        import vcsversion
+        info = vcsversion.version_info
+        info['major'] = 0
+        info['minor'] = 10
+        return info
+       
     def cleanup(self):
         logging.info("Cleaning up")
         while len(self._cleanup_cbs) > 0:
@@ -137,10 +146,10 @@ class VM(object):
         self.register_setting('--in-place', action='store_true', default=False, help='Install directly into the filesystem images. This is needed if your $TMPDIR is nodev and/or nosuid, but will result in slightly larger file system images.')
         self.register_setting('--tmpfs', metavar="OPTS", help='Use a tmpfs as the working directory, specifying its size or "-" to use tmpfs default (suid,dev,size=1G).')
         self.register_setting('-m', '--mem', type='int', default=128, help='Assign MEM megabytes of memory to the guest vm. [default: %default]')
-        self.register_setting('--cpus', type='int', default=1, help='Number of virtual CPU's. [default: %default]')
+        self.register_setting('--cpus', type='int', default=1, help='Number of virtual CPU\'s. [default: %default]')
 
         group = self.setting_group('Network related options')
-        domainname = '.'.join(socket.gethostbyname_ex(socket.gethostname())[0].split('.')[1:])
+        domainname = '.'.join(socket.gethostbyname_ex(socket.gethostname())[0].split('.')[1:]) or "defaultdomain"
         group.add_option('--domain', metavar='DOMAIN', default=domainname, help='Set DOMAIN as the domain name of the guest [default: The domain of the machine running this script: %default].')
         group.add_option('--ip', metavar='ADDRESS', default='dhcp', help='IP address in dotted form [default: %default].')
         group.add_option('--mac', metavar='VALUE', help='MAC address of the guest [default: one will be automatically generated on first run].')
@@ -237,7 +246,7 @@ class VM(object):
         is called to give all the plugins and the distro and hypervisor plugin a chance to set
         some reasonable defaults, which the frontend then can inspect and present
         """
-
+        multiline_split = re.compile("\s*,\s*")
         if self.distro and self.hypervisor:
             for plugin in VMBuilder._plugins:
                 self.plugins.append(plugin(self))
@@ -250,7 +259,8 @@ class VM(object):
                 if confvalue:
                     if self.optparser.get_option('--%s' % k):
                         if self.optparser.get_option('--%s' % k).action == 'append':
-                            setattr(self, k, confvalue.split(', '))
+                            values = multiline_split.split(confvalue)
+                            setattr(self, k, values)
                         else:
                             setattr(self, k, confvalue)
                     else:
@@ -405,6 +415,8 @@ class VM(object):
             logging.info("Installing bootloader")
             self.distro.install_bootloader()
 
+        self.distro.install_vmbuilder_log(log.logfile, self.rootmnt)
+
     def preflight_check(self):
         for opt in sum([self.confparser.options(section) for section in self.confparser.sections()], []) + [k for (k,v) in self.confparser.defaults().iteritems()]:
             if '-' in opt:
@@ -412,6 +424,20 @@ class VM(object):
 
         self.ip_defaults()
         self.call_hooks('preflight_check')
+
+        # Check repository availability
+        if self.mirror:
+            testurl = self.mirror
+        else:
+            testurl = 'http://archive.ubuntu.com/'
+
+        try:
+            logging.debug('Testing access to %s' % testurl)
+            testnet = urllib.urlopen(testurl)
+        except IOError:
+            raise VMBuilderUserError('Could not connect to %s. Please check your connectivity and try again.' % testurl)
+
+        testnet.close()
 
     def install_file(self, path, contents=None, source=None, mode=None):
         fullpath = '%s%s' % (self.installdir, path)

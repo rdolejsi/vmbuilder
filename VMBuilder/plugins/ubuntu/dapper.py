@@ -1,13 +1,12 @@
 #
 #    Uncomplicated VM Builder
-#    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2007-2009 Canonical Ltd.
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -23,6 +22,7 @@ import os
 import suite
 import shutil
 import socket
+import tempfile
 import VMBuilder
 import VMBuilder.disk as disk
 from   VMBuilder.util import run_cmd
@@ -52,6 +52,9 @@ class Dapper(suite.Suite):
         logging.debug("Setting up sources.list")
         self.install_sources_list()
 
+        logging.debug("Setting up apt proxy")
+        self.install_apt_proxy()
+
         logging.debug("Installing fstab")
         self.install_fstab()
 
@@ -78,17 +81,20 @@ class Dapper(suite.Suite):
             logging.debug("Creating device.map")
             self.install_device_map()
 
-        logging.debug("Installing ssh keys")
-        self.install_authorized_keys()
-
         logging.debug("Installing extra packages")
         self.install_extras()
 
         logging.debug("Creating initial user")
         self.create_initial_user()
 
+        logging.debug("Installing ssh keys")
+        self.install_authorized_keys()
+
         logging.debug("Copy host settings")
         self.copy_settings()
+
+        logging.debug("Setting timezone")
+        self.set_timezone()
 
         logging.debug("Making sure system is up-to-date")
         self.update()
@@ -99,11 +105,16 @@ class Dapper(suite.Suite):
         logging.debug("Unmounting volatile lrm filesystems")
         self.unmount_volatile()
 
+        if hasattr(self.vm, 'ec2') and self.vm.ec2:
+            logging.debug("Configuring for ec2")
+            self.install_ec2()
+
         logging.debug("Unpreventing daemons from starting")
         self.unprevent_daemons_starting()
 
     def update(self):
-        self.run_in_target('apt-get', '-y', '--force-yes', 'dist-upgrade')
+        self.run_in_target('apt-get', '-y', '--force-yes', 'dist-upgrade',
+                           env={ 'DEBIAN_FRONTEND' : 'noninteractive' })
         
     def install_authorized_keys(self):
         if self.vm.ssh_key:
@@ -114,14 +125,32 @@ class Dapper(suite.Suite):
             os.mkdir('%s/home/%s/.ssh' % (self.destdir, self.vm.user), 0700)
             shutil.copy(self.vm.ssh_user_key, '%s/home/%s/.ssh/authorized_keys' % (self.destdir, self.vm.user))
             os.chmod('%s/home/%s/.ssh/authorized_keys' % (self.destdir, self.vm.user), 0644)
+            self.run_in_target('chown', '-R', '%s:%s' % (self.vm.user,)*2, '/home/%s/.ssh/' % (self.vm.user)) 
+
         if self.vm.ssh_user_key or self.vm.ssh_key:
             if not self.vm.addpkg:
                 self.vm.addpkg = []
             self.vm.addpkg += ['openssh-server']
 
+    def update_passwords(self):
+        # Set the user password, using md5
+        self.run_in_target('chpasswd', '-m', stdin=('%s:%s\n' % (self.vm.user, getattr(self.vm, 'pass'))))
+
+        # Lock root account only if we didn't set the root password
+        if self.vm.rootpass:
+            self.run_in_target('chpasswd', '-m', stdin=('%s:%s\n' % ('root', self.vm.rootpass)))
+        else:
+            self.run_in_target('chpasswd', '-e', stdin='root:!\n')
+
+        if self.vm.lock_user:
+            logging.info('Locking %s' %(self.vm.user))
+            self.run_in_target('chpasswd', '-e', stdin=('%s:!\n' %(self.vm.user)))
+
     def create_initial_user(self):
-        self.run_in_target('adduser', '--disabled-password', '--gecos', self.vm.name, self.vm.user)
-        self.run_in_target('chpasswd', stdin=('%s:%s\n' % (self.vm.user, getattr(self.vm, 'pass'))))
+        if self.vm.uid:
+            self.run_in_target('adduser', '--disabled-password', '--uid', self.vm.uid, '--gecos', self.vm.name, self.vm.user)
+        else:
+            self.run_in_target('adduser', '--disabled-password', '--gecos', self.vm.name, self.vm.user)
         self.run_in_target('addgroup', '--system', 'admin')
         self.run_in_target('adduser', self.vm.user, 'admin')
 
@@ -129,8 +158,7 @@ class Dapper(suite.Suite):
         for group in ['adm', 'audio', 'cdrom', 'dialout', 'floppy', 'video', 'plugdev', 'dip', 'netdev', 'powerdev', 'lpadmin', 'scanner']:
             self.run_in_target('adduser', self.vm.user, group, ignore_fail=True)
 
-        # Lock root account
-        self.run_in_target('chpasswd', '-e', stdin='root:!\n')
+        self.update_passwords()
 
     def kernel_name(self):
         return 'linux-image-%s' % (self.vm.flavour or self.default_flavour[self.vm.arch],)
@@ -193,6 +221,10 @@ class Dapper(suite.Suite):
         # final vm is going to be on).
         self.run_in_target('apt-get', 'update', ignore_fail=final)
 
+    def install_apt_proxy(self):
+        if self.vm.proxy is not None:
+            self.vm.install_file('/etc/apt/apt.conf', '// Proxy added by vmbuilder\nAcquire::http { Proxy "%s"; };' % self.vm.proxy)
+
     def install_fstab(self):
         if self.vm.hypervisor.preferred_storage == VMBuilder.hypervisor.STORAGE_FS_IMAGE:
             self.install_from_template('/etc/fstab', 'dapper_fstab_fsimage', { 'fss' : disk.get_ordered_filesystems(self.vm), 'prefix' : self.disk_prefix })
@@ -203,12 +235,18 @@ class Dapper(suite.Suite):
         self.install_from_template('/boot/grub/device.map', 'devicemap', { 'prefix' : self.disk_prefix })
 
     def debootstrap(self):
-        cmd = ['/usr/sbin/debootstrap', '--arch=%s' % self.vm.arch, self.vm.suite, self.destdir, self.debootstrap_mirror()]
-        run_cmd(*cmd)
+        cmd = ['/usr/sbin/debootstrap', '--arch=%s' % self.vm.arch]
+        if self.vm.variant:
+            cmd += ['--variant=%s' % self.vm.variant]
+        cmd += [self.vm.suite, self.destdir, self.debootstrap_mirror()]
+        kwargs = { 'env' : { 'DEBIAN_FRONTEND' : 'noninteractive' } }
+        if self.vm.proxy:
+            kwargs['env']['http_proxy'] = self.vm.proxy
+        run_cmd(*cmd, **kwargs)
     
     def debootstrap_mirror(self):
         if self.vm.iso:
-            os.mkdir(isodir)
+            isodir = tempfile.mkdtemp()
             self.vm.add_clean_cb(lambda:os.rmdir(isodir))
             run_cmd('mount', '-o', 'loop', '-t', 'iso9660', self.vm.iso, isodir)
             self.vm.add_clean_cmd('umount', isodir)
@@ -220,9 +258,7 @@ class Dapper(suite.Suite):
 
 
     def install_mirrors(self):
-        if self.vm.iso:
-            mirror = "file:///isomnt"
-        elif self.vm.install_mirror:
+        if self.vm.install_mirror:
             mirror = self.vm.install_mirror
         else:
             mirror = self.vm.mirror
@@ -264,6 +300,7 @@ class Dapper(suite.Suite):
         self.vm.distro.run_in_target(*args, **kwargs)
 
     def copy_to_target(self, infile, destpath):
+        logging.debug("Copying %s on host to %s in guest" % (infile, destpath))
         dir = '%s/%s' % (self.destdir, os.path.dirname(destpath))
         if not os.path.isdir(dir):
             os.makedirs(dir)
@@ -282,9 +319,28 @@ class Dapper(suite.Suite):
     def copy_settings(self):
         self.copy_to_target('/etc/default/locale', '/etc/default/locale')
         self.copy_to_target('/etc/timezone', '/etc/timezone')
-        self.run_in_target('dpkg-reconfigure', '-pcritical', 'libc6')
+        self.run_in_target('dpkg-reconfigure', '-fnoninteractive', '-pcritical', 'libc6')
         self.run_in_target('locale-gen', 'en_US')
         if self.vm.lang:
             self.run_in_target('locale-gen', self.vm.lang)
             self.install_from_template('/etc/default/locale', 'locale', { 'lang' : self.vm.lang })
+        self.run_in_target('dpkg-reconfigure', '-fnoninteractive', '-pcritical', 'locales')
         self.run_in_target('dpkg-reconfigure', '-pcritical', 'locales')
+
+    def install_vmbuilder_log(self, logfile, rootdir):
+        shutil.copy(logfile, '%s/var/log/vmbuilder-install.log' % (rootdir,))
+
+    def set_timezone(self):
+        if self.vm.timezone:
+            self.unlink('%s/etc/localtime' % self.destdir)
+            shutil.copy('%s/usr/share/zoneinfo/%s' % (self.destdir, self.vm.timezone), '%s/etc/localtime' % (self.destdir,))
+
+    def install_ec2(self):
+        if self.vm.ec2:
+            logging.debug('This suite does not support ec2')
+
+    def disable_hwclock_access(self):
+        fp = open('%s/etc/default/rcS' % self.destdir, 'a')
+        fp.write('HWCLOCKACCESS=no')
+        fp.close()
+

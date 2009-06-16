@@ -1,13 +1,12 @@
 #
 #    Uncomplicated VM Builder
-#    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2007-2009 Canonical Ltd.
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -43,7 +42,7 @@ class VMWare(Hypervisor):
         return self.vm.disks
 
     def deploy(self):
-        vmdesc = VMBuilder.util.render_template('vmware', self.vm, vmxtemplate, { 'disks' : self.disks(), 'vmhwversion' : self.vmhwversion, 'cpu' : self.vm.cpu, 'mem' : self.vm.mem, 'hostname' : self.vm.hostname, 'arch' : self.vm.arch, 'guestos' : (self.vm.arch == 'amd64' and 'ubuntu-64' or 'ubuntu') })
+        vmdesc = VMBuilder.util.render_template('vmware', self.vm, self.vmxtemplate, { 'disks' : self.disks(), 'vmhwversion' : self.vmhwversion, 'cpus' : self.vm.cpus, 'mem' : self.vm.mem, 'hostname' : self.vm.hostname, 'arch' : self.vm.arch, 'guestos' : (self.vm.arch == 'amd64' and 'ubuntu-64' or 'ubuntu') })
 
         vmx = '%s/%s.vmx' % (self.vm.destdir, self.vm.hostname)
         fp = open(vmx, 'w')

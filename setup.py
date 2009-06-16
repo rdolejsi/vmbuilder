@@ -1,9 +1,21 @@
 from distutils.core import setup
 import VMBuilder.plugins
 from glob import glob
+import os.path
+import subprocess
 
+if os.path.exists('.bzr'):
+    try:
+        o = subprocess.Popen(('bzr','version-info', '--python'), stdout=subprocess.PIPE).stdout
+        f = open('VMBuilder/vcsversion.py', 'w')
+        f.write(o.read())
+        f.close()
+        o.close()
+    except Exception, e:
+        print repr(e)
+    
 setup(name='VMBuilder',
-      version='0.9',
+      version='0.11',
       description='Uncomplicated VM Builder',
       author='Soren Hansen',
       author_email='soren@canonical.com',

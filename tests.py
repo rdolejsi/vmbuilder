@@ -1,13 +1,12 @@
 #
 #    Uncomplicated VM Builder
-#    Copyright (C) 2007-2008 Canonical
+#    Copyright (C) 2007-2009 Canonical Ltd.
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -56,6 +55,16 @@ class TestUbuntuPlugin(unittest.TestCase):
         vm.suite = 'foo'
         ubuntu = Ubuntu(vm)
         self.assertRaises(VMBuilderUserError, ubuntu.preflight_check)
+
+
+class TestUtils(unittest.TestCase):
+    def test_run_cmd(self):
+        import VMBuilder
+        from VMBuilder.util import run_cmd
+        self.assertTrue("foobarbaztest" in 
+                        run_cmd("env", env={'foobarbaztest' : 'bar' }))
+
+
 
 if __name__ == '__main__':
     unittest.main()

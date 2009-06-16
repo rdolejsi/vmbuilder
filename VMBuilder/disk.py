@@ -1,13 +1,12 @@
 #
 #    Uncomplicated VM Builder
-#    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2007-2009 Canonical Ltd.
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -59,7 +58,7 @@ class Disk(object):
             self.filename = filename
         else:
             if self.preallocated:
-                raise VMBuilderException('Preallocated was set, but no filename given')
+                raise VMBuilderUserError('Preallocated was set, but no filename given')
             self.filename = 'disk%d.img' % len(self.vm.disks)
 
         self.partitions = []
@@ -180,7 +179,7 @@ class Disk(object):
         @type  destdir: string
         @param destdir: Target location of converted disk image
         @type  format: string
-        @param format: The target format (as understood by qemu-img)
+        @param format: The target format (as understood by qemu-img or vdi)
         @rtype:  string
         @return: the name of the converted image
         """
@@ -194,7 +193,10 @@ class Disk(object):
         destfile = '%s/%s.%s' % (destdir, filename, format)
 
         logging.info('Converting %s to %s, format %s' % (self.filename, format, destfile))
-        run_cmd(qemu_img_path(), 'convert', '-O', format, self.filename, destfile)
+        if format == 'vdi':
+            run_cmd(vbox_manager_path(), 'convertfromraw', '-format', 'VDI', self.filename, destfile)
+        else:
+            run_cmd(qemu_img_path(), 'convert', '-O', format, self.filename, destfile)
         os.unlink(self.filename)
         self.filename = os.path.abspath(destfile)
         return destfile
@@ -426,3 +428,10 @@ def qemu_img_path():
             path = '%s%s%s' % (dir, os.path.sep, exe)
             if os.access(path, os.X_OK):
                 return path
+
+def vbox_manager_path():
+    exe = 'VBoxManage'
+    for dir in os.environ['PATH'].split(os.path.pathsep):
+        path = '%s%s%s' % (dir, os.path.sep, exe)
+        if os.access(path, os.X_OK):
+            return path
