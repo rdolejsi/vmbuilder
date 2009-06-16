@@ -1,13 +1,12 @@
 #
 #    Uncomplicated VM Builder
-#    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2007-2009 Canonical Ltd.
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -29,6 +28,16 @@ class Intrepid(Hardy):
                        'lpia'  : ['lpia', 'lpiacompat'] }
     default_flavour = { 'i386' : 'virtual', 'amd64' : 'virtual', 'lpia' : 'lpia' }
     xen_kernel_flavour = 'virtual'
+
+    ec2_kernel_info = { 'i386' : 'aki-714daa18', 'amd64' : 'aki-4f4daa26' }
+    ec2_ramdisk_info = { 'i386': 'ari-7e4daa17', 'amd64' : 'ari-4c4daa25' }
+
+    def install_ec2(self):
+# workaround for policy bug on ubuntu-server. (see bug #275432)
+        self.run_in_target('apt-get', '--force-yes', '-y', 'install', 'policykit')
+        self.run_in_target('apt-get', '--force-yes', '-y', 'install', 'server^')
+        self.install_from_template('/etc/update-motd.d/51_update-motd', '51_update-motd')
+        self.run_in_target('chmod', '755', '/etc/update-motd.d/51_update-motd')
 
     def mangle_grub_menu_lst(self):
         bootdev = disk.bootpart(self.vm.disks)

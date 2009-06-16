@@ -1,13 +1,12 @@
 #
 #    Uncomplicated VM Builder
-#    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2007-2009 Canonical Ltd.
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,11 +18,14 @@
 #
 
 import os
+import os.path
 import stat
+import VMBuilder
+from   VMBuilder      import register_hypervisor, Hypervisor, VMBuilderUserError
+from   VMBuilder.disk import vbox_manager_path
 import VMBuilder.hypervisor
-from   VMBuilder            import register_hypervisor
 
-class VirtualBox(VMBuilder.hypervisor.Hypervisor):
+class VirtualBox(Hypervisor):
     preferred_storage = VMBuilder.hypervisor.STORAGE_DISK_IMAGE
     needs_bootloader = True
     name = 'VirtualBox'
@@ -42,7 +44,7 @@ class VirtualBox(VMBuilder.hypervisor.Hypervisor):
             self.vm.result_files.append(img_path)
 
     def deploy(self):
-        vm_deploy_script = VMBuilder.util.render_template('virtualbox', self.vm, 'vm_deploy_script', { 'os_type' : self.vm.distro ,'vm_name' : self.vm.hostname, 'vm_disks' : self.imgs, 'memory' : self.vm.mem })
+        vm_deploy_script = VMBuilder.util.render_template('virtualbox', self.vm, 'vm_deploy_script', { 'os_type' : self.vm.distro.__class__.__name__, 'vm_name' : self.vm.hostname, 'vm_disks' : self.imgs, 'memory' : self.vm.mem })
 
         script_file = '%s/deploy_%s.sh' % (self.vm.destdir, self.vm.hostname)
         fp = open(script_file, 'w')

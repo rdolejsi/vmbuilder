@@ -1,13 +1,12 @@
 #
 #    Uncomplicated VM Builder
-#    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2007-2009 Canonical Ltd.
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -82,12 +81,6 @@ class Dapper(suite.Suite):
             logging.debug("Creating device.map")
             self.install_device_map()
 
-        logging.debug("Installing ssh keys")
-        self.install_authorized_keys()
-
-	logging.debug("Install xen kernel")
-	self.install_xen_kernel()
-
         logging.debug("Installing extra packages")
         self.install_extras()
 
@@ -100,6 +93,9 @@ class Dapper(suite.Suite):
         logging.debug("Copy host settings")
         self.copy_settings()
 
+        logging.debug("Setting timezone")
+        self.set_timezone()
+
         logging.debug("Making sure system is up-to-date")
         self.update()
 
@@ -108,6 +104,10 @@ class Dapper(suite.Suite):
 
         logging.debug("Unmounting volatile lrm filesystems")
         self.unmount_volatile()
+
+        if hasattr(self.vm, 'ec2') and self.vm.ec2:
+            logging.debug("Configuring for ec2")
+            self.install_ec2()
 
         logging.debug("Unpreventing daemons from starting")
         self.unprevent_daemons_starting()
@@ -142,8 +142,20 @@ class Dapper(suite.Suite):
         else:
             self.run_in_target('chpasswd', '-e', stdin='root:!\n')
 
+<<<<<<< HEAD:VMBuilder/plugins/ubuntu/dapper.py
     def create_initial_user(self):
         self.run_in_target('adduser', '--disabled-password', '--gecos', self.vm.name, self.vm.user)
+=======
+        if self.vm.lock_user:
+            logging.info('Locking %s' %(self.vm.user))
+            self.run_in_target('chpasswd', '-e', stdin=('%s:!\n' %(self.vm.user)))
+
+    def create_initial_user(self):
+        if self.vm.uid:
+            self.run_in_target('adduser', '--disabled-password', '--uid', self.vm.uid, '--gecos', self.vm.name, self.vm.user)
+        else:
+            self.run_in_target('adduser', '--disabled-password', '--gecos', self.vm.name, self.vm.user)
+>>>>>>> vmbuilder_trunk:VMBuilder/plugins/ubuntu/dapper.py
         self.run_in_target('addgroup', '--system', 'admin')
         self.run_in_target('adduser', self.vm.user, 'admin')
 
@@ -251,9 +263,7 @@ class Dapper(suite.Suite):
 
 
     def install_mirrors(self):
-        if self.vm.iso:
-            mirror = "file:///isomnt"
-        elif self.vm.install_mirror:
+        if self.vm.install_mirror:
             mirror = self.vm.install_mirror
         else:
             mirror = self.vm.mirror
@@ -324,3 +334,21 @@ class Dapper(suite.Suite):
 
     def install_vmbuilder_log(self, logfile, rootdir):
         shutil.copy(logfile, '%s/var/log/vmbuilder-install.log' % (rootdir,))
+<<<<<<< HEAD:VMBuilder/plugins/ubuntu/dapper.py
+=======
+
+    def set_timezone(self):
+        if self.vm.timezone:
+            self.unlink('%s/etc/localtime' % self.destdir)
+            shutil.copy('%s/usr/share/zoneinfo/%s' % (self.destdir, self.vm.timezone), '%s/etc/localtime' % (self.destdir,))
+
+    def install_ec2(self):
+        if self.vm.ec2:
+            logging.debug('This suite does not support ec2')
+
+    def disable_hwclock_access(self):
+        fp = open('%s/etc/default/rcS' % self.destdir, 'a')
+        fp.write('HWCLOCKACCESS=no')
+        fp.close()
+
+>>>>>>> vmbuilder_trunk:VMBuilder/plugins/ubuntu/dapper.py

@@ -1,5 +1,5 @@
 #raw
-#! /usr/bin/env sh
+#! /usr/bin/env bash
 ###############################################################################
 #
 # This script is used to create und register a new VM
@@ -10,9 +10,13 @@
 #import os
 #import os.path
 
-os_type="Linux"
+#if $os_type == "Ubuntu"
+os_type="Ubuntu"
+#else
+os_type="Other"
+#end if
 
-disk_path="#echo os.path.abspath(os.path.dirname($vm_disks[0]))#/"
+disk_path="#echo os.path.abspath(os.path.dirname($vm_disks[0]))#"
 
 
 VBoxManage createvm -name $vm_name -ostype \$os_type -register
@@ -55,3 +59,6 @@ VBoxManage modifyvm $vm_name -nic1 nat
 VBoxManage modifyvm $vm_name -nic1 intnet 
 #end if
 #end if
+
+#activating PAE support for the CPU because some OS (e.g. ubuntu server ) won't boot in a virtual machine without it
+VBoxManage modifyvm $vm_name -pae on

@@ -1,13 +1,16 @@
 #    Uncomplicated VM Builder
+<<<<<<< HEAD:VMBuilder/plugins/cli/__init__.py
 #    Copyright (C) 2007-2008 Canonical Ltd.
 #    Copyright (C) 2009      Bernd Zeimetz <bzed@debian.org>
+=======
+#    Copyright (C) 2007-2009 Canonical Ltd.
+>>>>>>> vmbuilder_trunk:VMBuilder/plugins/cli/__init__.py
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,6 +28,10 @@ import sys
 import textwrap
 import VMBuilder
 from VMBuilder.disk import parse_size
+<<<<<<< HEAD:VMBuilder/plugins/cli/__init__.py
+=======
+import VMBuilder.hypervisor
+>>>>>>> vmbuilder_trunk:VMBuilder/plugins/cli/__init__.py
 _ = gettext
 
 
@@ -44,6 +51,7 @@ class CLI(VMBuilder.Frontend):
 
             vm = VMBuilder.VM(conf)
             vm.register_setting('--version', action='callback', callback=self.versioninfo, callback_kwargs={ 'vm' : vm }, help='Show version information')
+
             vm.register_setting('--rootsize', metavar='SIZE', type='int', default=4096, help='Size (in MB) of the root filesystem [default: %default]')
             vm.register_setting('--optsize', metavar='SIZE', type='int', default=0, help='Size (in MB) of the /opt filesystem. If not set, no /opt filesystem will be added.')
             vm.register_setting('--swapsize', metavar='SIZE', type='int', default=1024, help='Size (in MB) of the swap partition [default: %default]')
