@@ -1,10 +1,6 @@
 #    Uncomplicated VM Builder
-<<<<<<< HEAD:VMBuilder/plugins/cli/__init__.py
-#    Copyright (C) 2007-2008 Canonical Ltd.
-#    Copyright (C) 2009      Bernd Zeimetz <bzed@debian.org>
-=======
 #    Copyright (C) 2007-2009 Canonical Ltd.
->>>>>>> vmbuilder_trunk:VMBuilder/plugins/cli/__init__.py
+#    Copyright (C) 2009      Bernd Zeimetz <bzed@debian.org>
 #    
 #    See AUTHORS for list of contributors
 #
@@ -28,10 +24,7 @@ import sys
 import textwrap
 import VMBuilder
 from VMBuilder.disk import parse_size
-<<<<<<< HEAD:VMBuilder/plugins/cli/__init__.py
-=======
 import VMBuilder.hypervisor
->>>>>>> vmbuilder_trunk:VMBuilder/plugins/cli/__init__.py
 _ = gettext
 
 

@@ -142,10 +142,6 @@ class Dapper(suite.Suite):
         else:
             self.run_in_target('chpasswd', '-e', stdin='root:!\n')
 
-<<<<<<< HEAD:VMBuilder/plugins/ubuntu/dapper.py
-    def create_initial_user(self):
-        self.run_in_target('adduser', '--disabled-password', '--gecos', self.vm.name, self.vm.user)
-=======
         if self.vm.lock_user:
             logging.info('Locking %s' %(self.vm.user))
             self.run_in_target('chpasswd', '-e', stdin=('%s:!\n' %(self.vm.user)))
@@ -155,7 +151,7 @@ class Dapper(suite.Suite):
             self.run_in_target('adduser', '--disabled-password', '--uid', self.vm.uid, '--gecos', self.vm.name, self.vm.user)
         else:
             self.run_in_target('adduser', '--disabled-password', '--gecos', self.vm.name, self.vm.user)
->>>>>>> vmbuilder_trunk:VMBuilder/plugins/ubuntu/dapper.py
+
         self.run_in_target('addgroup', '--system', 'admin')
         self.run_in_target('adduser', self.vm.user, 'admin')
 
@@ -334,8 +330,6 @@ class Dapper(suite.Suite):
 
     def install_vmbuilder_log(self, logfile, rootdir):
         shutil.copy(logfile, '%s/var/log/vmbuilder-install.log' % (rootdir,))
-<<<<<<< HEAD:VMBuilder/plugins/ubuntu/dapper.py
-=======
 
     def set_timezone(self):
         if self.vm.timezone:
@@ -351,4 +345,3 @@ class Dapper(suite.Suite):
         fp.write('HWCLOCKACCESS=no')
         fp.close()
 
->>>>>>> vmbuilder_trunk:VMBuilder/plugins/ubuntu/dapper.py

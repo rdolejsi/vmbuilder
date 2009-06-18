@@ -63,19 +63,6 @@ class EC2(Plugin):
             if not self.vm.ec2_name:
                 raise VMBuilderUserError('When building for EC2 you must supply the name for the image.')
 
-<<<<<<< HEAD:VMBuilder/plugins/ec2/__init__.py
-        if not self.vm.ec2_cert:
-            if "EC2_CERT" in os.environ:
-                self.vm.ec2_cert = os.environ["EC2_CERT"]
-            else:
-                raise VMBuilderUserError('When building for EC2 you must provide your PEM encoded public key certificate')
-
-        if not self.vm.ec2_key:
-            if "EC2_PRIVATE_KEY" in os.environ:
-                self.vm.ec2_key = os.environ["EC2_PRIVATE_KEY"]
-            else:
-                raise VMBuilderUserError('When building for EC2 you must provide your PEM encoded private key file')
-=======
             if not self.vm.ec2_cert:
                 if "EC2_CERT" in os.environ:
                     self.vm.ec2_cert = os.environ["EC2_CERT"]
@@ -87,54 +74,10 @@ class EC2(Plugin):
                     self.vm.ec2_key = os.environ["EC2_PRIVATE_KEY"]
                 else:
                     raise VMBuilderUserError('When building for EC2 you must provide your PEM encoded private key file')
->>>>>>> vmbuilder_trunk:VMBuilder/plugins/ec2/__init__.py
 
             if not self.vm.ec2_user:
                 raise VMBuilderUserError('When building for EC2 you must provide your EC2 user ID (your AWS account number, not your AWS access key ID)')
 
-<<<<<<< HEAD:VMBuilder/plugins/ec2/__init__.py
-        if not self.vm.ec2_kernel:
-            logging.debug('No ec2-aki choosen setting to default. Use --ec2-kernel to change this')
-	    if self.vm.suite == 'hardy':
-               if self.vm.arch == 'amd64':
-	          self.vm.ec2_kernel = 'aki-6f709706'
-	       else:
-	          self.vm.ec2_kernel = 'aki-6e709707'
-	    elif self.vm.suite == 'intrepid':
-	        if self.vm.arch == 'amd64':
-                   self.vm.ec2_kernel = 'aki-4f4daa26'
-	        else: 
-	           self.vm.ec2_kernel = 'aki-714daa18' 
-	    elif self.vm.suite == 'jaunty':
-                if self.vm.arch == 'amd64':
-                    self.vm.ec2_kernel = 'aki-6507e00c'
-                else:
-	            self.vm.ec2_kernel = 'aki-6407e00d'
-
-        logging.info('%s - AKI to be used.' %(self.vm.ec2_kernel))
-	logging.info('WARNING! You might be using an outdated AKI. Please check xxx')
-
-        if not self.vm.ec2_ramdisk:
-            logging.debug('No ec2-ari choosen setting to default. Use --ec2-ramdisk to change this.')
-	    if self.vm.suite == 'hardy':
-              if self.vm.arch == 'amd64':
-                 self.vm.ec2_ramdisk = 'ari-61709708'
-              else:
-                 self.vm.ec2_ramdisk = 'ari-6c709705'
-	    elif self.vm.suite == 'intrepid':
-                if self.vm.arch == 'amd64':
-                   self.vm.ec2_ramdisk = 'ari-4c4daa25' 
-                else:
-                   self.vm.ec2_ramdisk = 'ari-7e4daa17'
-	    elif self.vm.suite == 'jaunty':
-                if self.vm.arch == 'amd64':
-	           self.vm.ec2_ramdisk = 'ari-6307e00a'
-                else:
-	           self.vm.ec2_ramdisk = 'ari-6207e00b'
-
-	logging .info('%s - ARI to be used.'%(self.vm.ec2_ramdisk))
-	logging.info('WARNING! You might be using an outdated AKI. Please check xxx')
-=======
             if not self.vm.ec2_kernel:
                 self.vm.ec2_kernel = self.vm.distro.get_ec2_kernel()
                 logging.debug('%s - to be used for AKI.' %(self.vm.ec2_kernel))
@@ -142,7 +85,6 @@ class EC2(Plugin):
             if not self.vm.ec2_ramdisk:
                 self.vm.ec2_ramdisk = self.vm.distro.ec2_ramdisk_id()
                 logging.debug('%s - to be use for the ARI.' %(self.vm.ec2_ramdisk))
->>>>>>> vmbuilder_trunk:VMBuilder/plugins/ec2/__init__.py
 
             if self.vm.ec2_upload:
                 if not self.vm.ec2_bucket:
@@ -154,16 +96,6 @@ class EC2(Plugin):
                 if not self.vm.ec2_secret_key:
                     raise VMBuilderUserError('When building for EC2 you must provide your AWS secret access key.')
 
-<<<<<<< HEAD:VMBuilder/plugins/ec2/__init__.py
-	logging.info('Installing common software')
-	self.install_common()
-	if self.vm.suite == 'hardy':
-             self.install_hardy()
-	elif self.vm.suite == 'intrepid':
-              self.install_intrepid()
-	elif self.vm.suite == 'jaunty':
-              self.install_jaunty()
-=======
         if not self.vm.ec2_version:
             raise VMBuilderUserError('When building for EC2 you must provide version info.')
 
@@ -185,49 +117,25 @@ class EC2(Plugin):
             self.vm.ppa = []
 
         self.vm.ppa += ['ubuntu-on-ec2/ppa']
->>>>>>> vmbuilder_trunk:VMBuilder/plugins/ec2/__init__.py
 
     def post_install(self):
         if not getattr(self.vm, 'ec2', False):
             return
 
         logging.info("Running ec2 postinstall")
-<<<<<<< HEAD:VMBuilder/plugins/ec2/__init__.py
-	logging.info("Running common post install")
-	if self.vm.suite == 'hardy':
-	     self.postinstall_hardy()
-	elif self.vm.suite == 'intrepid':
-	     self.postinstall_intrepid()
-	elif self.vm.suite == 'jaunty':
-	     self.postinstall_jaunty()
-	self.postinstall_common()
 
-    def deploy(self):
-        if not self.vm.ec2:
-            return False
-
-        logging.info("Building EC2 bundle")
-        bundle_cmdline = ['ec2-bundle-image', '--image', self.vm.filesystems[0].filename, '--cert', self.vm.ec2_cert, '--privatekey', self.vm.ec2_key, '--user', self.vm.ec2_user, '--prefix', self.vm.ec2_name, '-r', ['i386', 'x86_64'][self.vm.arch == 'amd64'], '-d', self.vm.workdir, '--kernel', self.vm.ec2_kernel, '--ramdisk', self.vm.ec2_ramdisk]
-=======
         self.install_from_template('/etc/ec2_version', 'ec2_version', { 'version' : self.vm.ec2_version } )
         self.install_from_template('/etc/ssh/sshd_config', 'sshd_config')
         self.install_from_template('/etc/sudoers', 'sudoers')
 
         if self.vm.ec2_landscape:
             self.install_from_template('/etc/default/landscape-client', 'landscape_client')
->>>>>>> vmbuilder_trunk:VMBuilder/plugins/ec2/__init__.py
 
         self.vm.distro.disable_hwclock_access()
 
-<<<<<<< HEAD:VMBuilder/plugins/ec2/__init__.py
-        logging.info("Uploading EC2 bundle")
-        upload_cmdline = ['ec2-upload-bundle', '--retry', '--manifest', '%s/%s.manifest.xml' % (self.vm.workdir, self.vm.ec2_name), '--bucket', self.vm.ec2_bucket, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
-        run_cmd(*upload_cmdline)
-=======
     def deploy(self):
         if not getattr(self.vm, 'ec2', False):
             return False
->>>>>>> vmbuilder_trunk:VMBuilder/plugins/ec2/__init__.py
 
         if self.vm.ec2_bundle:
             logging.info("Building EC2 bundle")
@@ -250,112 +158,5 @@ class EC2(Plugin):
             self.vm.result_files.append(self.vm.filesystems[0].filename)
 
         return True
-
-    def install_common(self):
-        if not self.vm.ec2:
-            return False
-
-	if not self.vm.addpkg:
-	    self.vm.addpkg = []
-
-	logging.info('Installing common software.')
-	self.vm.addpkg += ['openssh-server', 
-                           'ec2-init', 
-                           'standard^',
-		           'ec2-ami-tools',
-                           'update-motd',
-                           'curl',
-                           'screen',
-                           'screen-profiles']
-
-	if not self.vm.ppa:
-	    self.vm.ppa = []
-
-        self.vm.ppa += ['ubuntu-on-ec2']
-
-    def install_hardy(self):
-	if not self.vm.ec2:
-	    return False
-
-	logging.info('Installing software for hardy.')
-	self.vm.addpkg += ['ruby',
-			   'libc6-xen',
-			   'ec2-modules',
-			   'libopenssl-ruby',
-			   'landscape-common',
-			   'landscape-client']
-
-
-    def postinstall_hardy(self):
-	if not self.vm.ec2:
-	    return False
-
-	logging.info('Running post-install for hardy')
-	# work around for libc6/xen bug in hardy.
-	self.install_from_template('/etc/ld.so.conf.d/libc6-xen.conf', 'xen-ld-so-conf')
-	self.run_in_target('apt-get', 'remove', '-y', 'libc6-i686')
-
-	self.install_from_template('/etc/update-motd.d/51_update-motd', '51_update-motd-hardy')
-	self.install_from_template('/etc/event.d/xvc0', 'xvc0')
-	self.run_in_target('update-rc.d', '-f', 'hwclockfirst.sh', 'remove')
-
-    def install_intrepid(self):
-	if not self.vm.ec2:
-	    return False
-
-	logging.info('Installing software for intrepid')
-	self.vm.addpkg += ['ec2-modules',
-			   'ruby',
-			   'libopenssl-ruby',
-                           'server^',
-                           'policykit',
-			   'landscape-common',
-			   'landscape-client']
-
-    def postinstall_intrepid(self):
-	if not self.vm.ec2:
-	    return False
-
-	logging.info('Running post-install for intrepid')
-	self.install_from_template('/etc/update-motd.d/51_update-motd', '51_update-motd-intrepid')
-
-    def install_jaunty(self):
-	if not self.vm.ec2:
-	    return False
-
-	logging.info('Installing software for jaunty')
-	self.vm.addpkg += ['ec2-modules',
-			   'ruby1.8',
-                           'server^',
-			   'libopenssl-ruby1.8']
-
-    def postinall_jaunty(self):
-	if not self.vm.ec2:
-            return False
-	
-	logging.info('Running post-install for jaunty') 
-	self.install_from_template('/etc/update-motd.d/51_update-motd', '51_update-motd-intrepid')
-
-    def postinstall_common(self):
-	if not self.vm.ec2:
-	    return False
-
-	logging.info('Running common post-install')
-	self.install_from_template('/etc/ssh/sshd_config', 'sshd_config')
-	self.run_in_target('chpasswd', '-e', stdin='ubuntu:!\n')
-	# this makes my skin crawl
-	self.install_from_template('/etc/sudoers', 'sudoers')
-	# this doesnt
-	self.run_in_target('chmod', '755', '/etc/update-motd.d/51_update-motd')
-	self.install_from_template('/etc/ec2_version', 'ec2_version', { 'version' : self.vm.ec2_version })
-
-	self.run_in_target('rm', '-f', '/etc/localtime')
-	self.run_in_target('ln', '-s', '/usr/share/zoneinfo/UTC', '/etc/localtime')
-
-	self.run_in_target('usermod', '-u', '135', 'ubuntu')
-	self.run_in_target('chown', '-R', 'ubuntu', '/home/ubuntu')
-
-	self.run_in_target('update-rc.d', '-f', 'hwclock.sh', 'remove') 
-	self.install_from_template('/etc/default/landscape-client', 'landscape_client')
 
 register_plugin(EC2)

@@ -138,13 +138,10 @@ class Ubuntu(Distro):
                 msg = "locale-gen does not recognize your locale '%s'" % self.vm.lang
                 raise VMBuilderUserError(msg)
 
-<<<<<<< HEAD:VMBuilder/plugins/ubuntu/distro.py
-=======
         if self.vm.ec2:
             self.get_ec2_kernel()
             self.get_ec2_ramdisk()
 
->>>>>>> vmbuilder_trunk:VMBuilder/plugins/ubuntu/distro.py
     def install(self, destdir):
         self.destdir = destdir
         self.suite.install(destdir)
