@@ -18,7 +18,6 @@ os_type="Other"
 
 disk_path="#echo os.path.abspath(os.path.dirname($vm_disks[0]))#"
 
-
 VBoxManage createvm -name $vm_name -ostype \$os_type -register
 
 VBoxManage openmedium #slurp

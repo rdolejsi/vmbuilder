@@ -113,6 +113,10 @@ class Etch(suite.Suite):
         logging.debug("Unmounting volatile lrm filesystems")
         self.unmount_volatile()
 
+        if hasattr(self.vm, 'ec2') and self.vm.ec2:
+            logging.debug("Configuring for ec2")
+            self.install_ec2()
+
         logging.debug("Unpreventing daemons from starting")
         self.unprevent_daemons_starting()
 
@@ -340,3 +344,17 @@ class Etch(suite.Suite):
 
     def install_vmbuilder_log(self, logfile, rootdir):
         shutil.copy(logfile, '%s/var/log/vmbuilder-install.log' % (rootdir,))
+
+    def install_ec2(self):
+	#Mostly ported over from the Ubuntu install_ec2 commands
+        self.run_in_target('apt-get' ,'--force-yes', '-y', 'install', 'libc6-xen')
+        self.run_in_target('apt-get','--purge','--force-yes', '-y', 'remove', 'libc6-i686')
+        #TODO: etch doesn't use Upstart, port over to init scripts
+        #Basically, it makes it setup a getty console on xvc0
+        #self.install_from_template('/etc/event.d/xvc0', 'upstart', { 'console' : 'xvc0' })
+        #TODO: Debian bug 420726 may effect this next line since Etch has libc < 2.5-5
+        self.install_from_template('/etc/ld.so.conf.d/libc6-xen.conf', 'xen-ld-so-conf')
+        self.run_in_target('update-rc.d', '-f', 'hwclockfirst.sh', 'remove')
+        #TODO: Change to Debian appropriate MOTD
+        #self.install_from_template('/etc/update-motd.d/51_update-motd', '51_update-motd-hardy')
+        #self.run_in_target('chmod', '755', '/etc/update-motd.d/51_update-motd')
