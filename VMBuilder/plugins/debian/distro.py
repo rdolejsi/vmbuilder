@@ -163,14 +163,24 @@ EOT''')
     def xen_kernel_version(self):
         if self.suite.xen_kernel_flavour:
             if not self.xen_kernel:
-                rmad = run_cmd('rmadison', 'linux-image-%s' % self.suite.xen_kernel_flavour)
+                rmad = run_cmd('rmadison', 'linux-image-2.6-%s-%s' % (self.suite.xen_kernel_flavour, self.vm.arch))
                 version = ['0', '0','0', '0']
 
                 for line in rmad.splitlines():
                     sline = line.split('|')
                     
-                    if sline[2].strip().startswith(self.vm.suite):
+                    #Linux XEN kernel is referred to in Debian by rmadison as:
+                    #linux-image-2.6-xen-amd64 | 2.6.18+6etch3 |     oldstable | amd64
+                    #Specifically, etch is called 'oldstable' in the 3rd field, to get the suite you need
+                    #excavate it from the 2nd field.
+
+                    if sline[1].strip().count(self.vm.suite) > 0:
+                        #Fix for Debian handling of kernel version names
+                        #It's x.y.z+w, not x.y.z.w
                         vt = sline[1].strip().split('.')
+			deb_vt = vt[2].split('+')
+			vt = [vt[0], vt[1], deb_vt[0], deb_vt[1]]
+
                         for i in range(4):
                             if int(vt[i]) > int(version[i]):
                                 version = vt
