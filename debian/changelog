@@ -1,0 +1,6 @@
+vm-builder (0.0-1) unstable; urgency=low
+
+  * Ported Ubuntu-package to Debian.
+
+ -- David Wendt <dcrkid@yahoo.com>  Sat, 20 Jun 2009 10:42:11 +0200
+
