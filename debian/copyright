@@ -7,6 +7,9 @@ It was downloaded from:
 
     git://git.debian.org/git/pkg-escience/vmbuilder.git
 
+    with original upstream available from
+    https://code.launchpad.net/vmbuilder
+
 Upstream Authors:
 
     Main author and original conceptor: Soren Hansen <soren@canonical.com>
