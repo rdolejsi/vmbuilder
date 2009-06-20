@@ -10,7 +10,7 @@ Vcs-Bzr: http://bazaar.launchpad.net/~ubuntu-virt/vmbuilder/trunk
 
 Package: python-vm-builder
 Architecture: all
-Depends: kvm (>= 1:69) | qemu, debootstrap (>= 1.0.9), parted, kpartx, ubuntu-keyring|debian-keyring, ${python:Depends}, python-cheetah, devscripts, rsync
+Depends: kvm (>= 1:69) | qemu, debootstrap (>= 1.0.9), parted, kpartx, ubuntu-keyring|debian-keyring, ${python:Depends}, python-cheetah, devscripts, rsync, ${misc:Depends}
 Recommends: python-libvirt
 XB-Python-Version: ${python:Versions}
 Description: VM builder
@@ -32,7 +32,7 @@ Description: VM builder
 
 Package: ubuntu-vm-builder
 Architecture: all
-Depends: python-vm-builder
+Depends: python-vm-builder, ${misc:Depends}, ${python:Depends}
 Description: Ubuntu VM builder
  Script which automates the process of creating a ready to use VM based on
  Ubuntu. You can pass command line options to add extra packages, remove
@@ -43,7 +43,7 @@ Description: Ubuntu VM builder
 
 Package: debian-vm-builder
 Architecture: all
-Depends: python-vm-builder
+Depends: python-vm-builder, ${misc:Depends}, ${python:Depends}
 Description: Ubuntu VM builder
  Script which automates the process of creating a ready to use VM based on
  Debian. You can pass command line options to add extra packages, remove
@@ -54,7 +54,7 @@ Description: Ubuntu VM builder
 
 Package: python-vm-builder-ec2
 Architecture: all
-Depends: python-vm-builder, ec2-ami-tools, python-boto
+Depends: python-vm-builder, ec2-ami-tools, python-boto, ${misc:Depends}
 XB-Python-Version: ${python:Versions}
 Description: EC2 Ubuntu VM builder
  Ubuntu vmbuilder module that automates the process of create a ready to use
