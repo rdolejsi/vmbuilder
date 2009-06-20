@@ -84,7 +84,10 @@ class Disk(object):
             if directory:
                 self.filename = '%s/%s' % (directory, self.filename)
             logging.info('Creating disk image: %s' % self.filename)
-            run_cmd(qemu_img_path(), 'create', '-f', 'raw', self.filename, '%dM' % self.size)
+            qemu_img_output = run_cmd(qemu_img_path(), 'create', '-f', 'raw', self.filename, '%dM' % self.size)
+            if not os.path.exists(self.filename): 
+                logging.info("Problem while creating raw image: %s" % qemu_img_output)
+                raise Exception("Problem while creating raw image: %s" % qemu_img_output)
 
         # From here, we assume that self.filename refers to whatever holds the disk image,
         # be it a file, a partition, logical volume, actual disk..
