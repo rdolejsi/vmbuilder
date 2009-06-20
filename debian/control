@@ -10,7 +10,7 @@ Vcs-Bzr: http://bazaar.launchpad.net/~ubuntu-virt/vmbuilder/trunk
 
 Package: python-vm-builder
 Architecture: all
-Depends: kvm (>= 1:69) | qemu, debootstrap (>= 1.0.9), parted, kpartx, ubuntu-keyring, ${python:Depends}, python-cheetah, devscripts, rsync
+Depends: kvm (>= 1:69) | qemu, debootstrap (>= 1.0.9), parted, kpartx, ubuntu-keyring|debian-keyring, ${python:Depends}, python-cheetah, devscripts, rsync
 Recommends: python-libvirt
 XB-Python-Version: ${python:Versions}
 Description: VM builder
