@@ -1,4 +1,4 @@
-vm-builder (0.0-1) unstable; urgency=low
+vm-builder (0.0-1) UNRELEASED; urgency=low
 
   * Ported Ubuntu-package to Debian.
 
