@@ -218,7 +218,13 @@ class Disk(object):
             @rtype: string
             @return: the filesystem type of the partition suitable for passing to parted
             """
-            return { TYPE_EXT2: 'ext2', TYPE_EXT3: 'ext2', TYPE_XFS: 'ext2', TYPE_SWAP: 'linux-swap' }[self.type]
+            if None:
+                return { TYPE_EXT2: 'ext2', TYPE_EXT3: 'ext2', TYPE_XFS: 'ext2', TYPE_SWAP: 'linux-swap' }[self.type]
+            else:
+                # latest parted versions (observed with parted (GNU parted) 1.8.8.1.159-1e0e in Debian sid) demand
+                # a different specification of the swap partition, see 
+                # http://www.mail-archive.com/bug-parted@gnu.org/msg02400.html
+                return { TYPE_EXT2: 'ext2', TYPE_EXT3: 'ext2', TYPE_XFS: 'ext2', TYPE_SWAP: 'linux-swap(new)' }[self.type]
 
         def create(self, disk):
             """Adds partition to the disk image (does not mkfs or anything like that)"""
