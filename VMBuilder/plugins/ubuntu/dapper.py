@@ -318,8 +318,15 @@ class Dapper(suite.Suite):
             os.makedirs('%s/var/lock' % fs.mntpath)
 
     def copy_settings(self):
-        self.copy_to_target('/etc/default/locale', '/etc/default/locale')
-        self.copy_to_target('/etc/timezone', '/etc/timezone')
+	if os.path.exists("/etc/default/locale"):
+		self.copy_to_target('/etc/default/locale', '/etc/default/locale')
+	else:
+            logging.info("Local file '/etc/default/locale' is not available, not copied to target.")
+
+	if os.path.exists("/etc/timezone"):
+            self.copy_to_target('/etc/timezone', '/etc/timezone')
+	else:
+            logging.info("Local file '/etc/timezone' not available, not copied to target. Consider to run 'dpkg-reconfigure tzdata' and the rerun this script.")
         self.run_in_target('dpkg-reconfigure', '-fnoninteractive', '-pcritical', 'libc6')
         self.run_in_target('locale-gen', 'en_US')
         if self.vm.lang:
