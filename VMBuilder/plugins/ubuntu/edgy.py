@@ -55,7 +55,10 @@ proc                                            /proc           proc    defaults
             shutil.rmtree(csdir)
             self.copy_to_target('/etc/console-setup', '/etc/console-setup')
             self.copy_to_target('/etc/default/console-setup', '/etc/default/console-setup')
-        self.copy_to_target('/etc/timezone', '/etc/timezone')
+	if os.path.exists('/etc/timezone'):
+            self.copy_to_target('/etc/timezone', '/etc/timezone')
+	else:
+            logging.info("Local file '/etc/timezone' not available, not copied to target, consider to run 'dpkg-reconfigure tzdata' and restart.")
         self.run_in_target('dpkg-reconfigure', '-fnoninteractive', '-pcritical', 'tzdata')
         self.run_in_target('locale-gen', 'en_US')
         if self.vm.lang:
