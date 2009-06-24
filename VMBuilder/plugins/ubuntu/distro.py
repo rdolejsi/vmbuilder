@@ -1,13 +1,12 @@
 #
 #    Uncomplicated VM Builder
-#    Copyright (C) 2007-2008 Canonical Ltd.
+#    Copyright (C) 2007-2009 Canonical Ltd.
 #    
 #    See AUTHORS for list of contributors
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#    it under the terms of the GNU General Public License version 3, as
+#    published by the Free Software Foundation.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -63,6 +62,7 @@ class Ubuntu(Distro):
         group.add_option('--components', metavar='COMPS', help='A comma seperated list of distro components to include (e.g. main,universe).')
         group.add_option('--ppa', metavar='PPA', action='append', help='Add ppa belonging to PPA to the vm\'s sources.list.')
         group.add_option('--lang', metavar='LANG', default=self.get_locale(), help='Set the locale to LANG [default: %default]')
+        group.add_option('--timezone', action='store_true', help='Set the timezone to the vm.')
         self.vm.register_setting_group(group)
 
         group = self.vm.setting_group('Settings for the initial user')
@@ -70,6 +70,9 @@ class Ubuntu(Distro):
         group.add_option('--name', default='Ubuntu', help='Full name of initial user [default: %default]')
         group.add_option('--pass', default='ubuntu', help='Password of initial user [default: %default]')
         group.add_option('--rootpass', help='Initial root password (WARNING: this has strong security implications).')
+        group.add_option('--uid', help='Initial UID value.')
+        group.add_option('--gid', help='Initial GID value.')
+        group.add_option('--lock-user', action='store_true', help='Lock the initial user [default %default]')
         self.vm.register_setting_group(group)
 
         group = self.vm.setting_group('Other options')
@@ -133,6 +136,10 @@ class Ubuntu(Distro):
                 msg = "locale-gen does not recognize your locale '%s'" % self.vm.lang
                 raise VMBuilderUserError(msg)
 
+        if self.vm.ec2:
+            self.get_ec2_kernel()
+            self.get_ec2_ramdisk()
+
     def install(self, destdir):
         self.destdir = destdir
         self.suite.install(destdir)
@@ -180,13 +187,29 @@ EOT''')
         else:
             raise VMBuilderUserError('There is no valid xen kernel for the suite selected.')
 
-    def xen_kernel_path(self):
-        path = '/boot/vmlinuz-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour)
+    def xen_kernel_initrd_path(self, which):
+        path = '/boot/%s-%s-%s' % (which, self.xen_kernel_version(), self.suite.xen_kernel_flavour)
         return path
+
+    def xen_kernel_path(self):
+        return self.xen_kernel_initrd_path('kernel')
 
     def xen_ramdisk_path(self):
-        path = '/boot/initrd.img-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour)
-        return path
+        return self.xen_kernel_initrd_path('ramdisk')
 
+    def get_ec2_kernel(self):
+        if self.suite.ec2_kernel_info:
+            return self.suite.ec2_kernel_info[self.vm.arch]
+        else:
+            raise VMBuilderUserError('EC2 is not supported for the suite selected')
+
+    def get_ec2_ramdisk(self):
+        if self.suite.ec2_ramdisk_info:
+            return self.suite.ec2_ramdisk_info[self.vm.arch]
+        else:
+            raise VMBuilderUserError('EC2 is not supported for the suite selected')
+
+    def disable_hwclock_access(self):
+        return self.suite.disable_hwclock_access()
 
 register_distro(Ubuntu)

@@ -30,7 +30,7 @@ from   VMBuilder.exception import VMBuilderUserError, VMBuilderException
 class Debian(Distro):
     name = 'Debian'
     arg = 'debian'
-    suites = ['etch']
+    suites = ['etch', 'lenny']
     
     # Maps host arch to valid guest archs
     # FIXME: Running a amd64 kernel with an i386 userspace allows us to run
