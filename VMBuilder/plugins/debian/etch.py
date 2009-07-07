@@ -45,6 +45,8 @@ class Etch(suite.Suite):
     xen_kernel_flavour = 'xen'
     virtio_net = False
 
+    ec2_kernel_info = { 'i386' : 'aki-9b00e5f2', 'amd64' : 'aki-9800e5f1' }
+
     def check_kernel_flavour(self, arch, flavour):
         return flavour in self.valid_flavours[arch]
 

@@ -126,7 +126,7 @@ class Debian(Distro):
                 self.vm.components = self.vm.components.split(',')
 
         if self.vm.hypervisor.name == 'Xen':
-            logging.info('Xen kernel default: linux-image-%s %s', self.suite.xen_kernel_flavour, self.xen_kernel_version())
+            logging.info('Xen kernel default: linux-image-2.6-%s-%s', self.suite.xen_kernel_flavour, self.vm.arch)
 
         self.vm.virtio_net = self.use_virtio_net()
 
