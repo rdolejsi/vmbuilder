@@ -3,12 +3,16 @@
 ###############################################################################
 #
 # This script is used to create und register a new VM
-# in VirtualBox
+# in VirtualBox. It resides as a template in 
+# VMBuilder/plugins/virtualbox/templates/vm_deploy_script.tmpl
 #
 ###############################################################################
 #end raw
 #import os
 #import os.path
+
+# exit upon error
+set -e
 
 #if $os_type == "Ubuntu"
 os_type="Ubuntu"
@@ -18,22 +22,29 @@ os_type="Other"
 
 disk_path="#echo os.path.abspath(os.path.dirname($vm_disks[0]))#"
 
-VBoxManage createvm -name $vm_name -ostype \$os_type -register
+if VBoxManage list vms| grep -q '^"$vm_name"'; then
+	echo "Virtual image named '$vm_name' is already available. Creation skipped.";
+else
+	VBoxManage createvm -name $vm_name -ostype \$os_type -register
+fi
 
-VBoxManage openmedium #slurp
+
+# FIXME: test on identity needs improvement
+if VBoxManage list hdds; egrep '^Location:.*$disk\$'; then
+	echo "Disk '$disk' is already known to the system. Skipping HD creation."
+else
+	VBoxManage openmedium #slurp
 #set $i = 0
 #for $disk in $vm_disks
     #set $i = $i + 1
     #set $disk = os.path.basename(disk)
 disk \${disk_path}/$disk -type normal #slurp
 #end for
+fi
 
-# FIXME: only do "-sata on" when not the OSE version of
-#        virtualbox is used. This can be tested with
-#        VBoxManage  --version | grep -q _OSE
-#        Check http://www.virtualbox.org/wiki/Editions
-#        for details
-VBoxManage modifyvm $vm_name -memory $memory -sata on #slurp
+sata=""
+if ! VBoxManage --version | grep -q "_OSE"; then sata="-sata on"; fi
+VBoxManage modifyvm $vm_name -memory $memory \${sata} #slurp
 #set $i = 0
 #for $disk in $vm_disks
     #set $i = $i + 1
