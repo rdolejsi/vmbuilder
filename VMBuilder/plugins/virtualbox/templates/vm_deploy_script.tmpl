@@ -24,6 +24,11 @@ VBoxManage openmedium #slurp
 disk \${disk_path}/$disk -type normal #slurp
 #end for
 
+# FIXME: only do "-sata on" when not the OSE version of
+#        virtualbox is used. This can be tested with
+#        VBoxManage  --version | grep -q _OSE
+#        Check http://www.virtualbox.org/wiki/Editions
+#        for details
 VBoxManage modifyvm $vm_name -memory $memory -sata on #slurp
 #set $i = 0
 #for $disk in $vm_disks
