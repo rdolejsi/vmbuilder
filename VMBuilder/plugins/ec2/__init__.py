@@ -45,16 +45,44 @@ class EC2(Plugin):
         group.add_option('--ec2-bundle', action='store_true', help='Bundle the instance')
         group.add_option('--ec2-upload', action='store_true', help='Upload the instance')
         group.add_option('--ec2-register', action='store_true', help='Register the instance')
+        group.add_option('--no-amazon-tools', action='store_true', help='Do not use Amazon\'s EC2 AMI tools.')
+        group.add_option('--no-euca-tools', action='store_true', help='Do not use Eucalyptus\' EC2 AMI tools.')
         self.vm.register_setting_group(group)
 
     def preflight_check(self):
         if not getattr(self.vm, 'ec2', False):
             return True
 
-        try:
-            run_cmd('ec2-ami-tools-version')
-        except VMBuilderException, e:
-            raise VMBuilderUserError('You need to have the Amazon EC2 AMI tools installed')
+        if self.vm.no_amazon_tools:
+            logging.info("Not using Amazon ec2-tools.")
+            awsec2_installed = False
+        else:
+            try:
+                run_cmd('ec2-ami-tools-version')
+            except OSError, VMBuilderException:
+                awsec2_installed = False
+            else:
+                awsec2_installed = True
+
+        if self.vm.no_euca_tools:
+            logging.info("Not using Eucalyptus euca2ools.")
+            euca_installed = False
+        else:
+            try: #TODO: Fix this so that it doesn't use running d-a-z as a we-have-euca2ools check
+                run_cmd('euca-describe-availability-zones')
+            except OSError, VMBuilderException:
+                euca_installed = False
+            else:
+                euca_installed = True
+
+        if euca_installed:
+            self.ec2_tools_prefix = "euca-"
+        elif awsec2_installed:
+            self.ec2_tools_prefix = "ec2-"
+        else:
+            raise VMBuilderUserError('You do not have a suitable AMI tools suite installed.')
+
+        logging.info("EC2 tools prefix: %s" % self.ec2_tools_prefix)
 
         if not self.vm.hypervisor.name == 'Xen':
             raise VMBuilderUserError('When building for EC2 you must use the xen hypervisor.')
@@ -139,13 +167,13 @@ class EC2(Plugin):
 
         if self.vm.ec2_bundle:
             logging.info("Building EC2 bundle")
-            bundle_cmdline = ['ec2-bundle-image', '--image', self.vm.filesystems[0].filename, '--cert', self.vm.ec2_cert, '--privatekey', self.vm.ec2_key, '--user', self.vm.ec2_user, '--prefix', self.vm.ec2_name, '-r', ['i386', 'x86_64'][self.vm.arch == 'amd64'], '-d', self.vm.workdir, '--kernel', self.vm.ec2_kernel, '--ramdisk', self.vm.ec2_ramdisk]
+            bundle_cmdline = ['%sbundle-image' % self.ec2_tools_prefix, '--image', self.vm.filesystems[0].filename, '--cert', self.vm.ec2_cert, '--privatekey', self.vm.ec2_key, '--user', self.vm.ec2_user, '--prefix', self.vm.ec2_name, '-r', ['i386', 'x86_64'][self.vm.arch == 'amd64'], '-d', self.vm.workdir, '--kernel', self.vm.ec2_kernel, '--ramdisk', self.vm.ec2_ramdisk]
             run_cmd(*bundle_cmdline)
 
             manifest = '%s/%s.manifest.xml' % (self.vm.workdir, self.vm.ec2_name)
             if self.vm.ec2_upload:
                 logging.info("Uploading EC2 bundle")
-                upload_cmdline = ['ec2-upload-bundle', '--retry', '--manifest', manifest, '--bucket', self.vm.ec2_bucket, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
+                upload_cmdline = ['%supload-bundle' % self.ec2_tools_prefix, '--retry', '--manifest', manifest, '--bucket', self.vm.ec2_bucket, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
                 run_cmd(*upload_cmdline)
 
                 if self.vm.ec2_register:
