@@ -30,17 +30,16 @@ fi
 
 
 # FIXME: test on identity needs improvement
-if VBoxManage list hdds; egrep '^Location:.*$disk\$'; then
-	echo "Disk '$disk' is already known to the system. Skipping HD creation."
-else
-	VBoxManage openmedium #slurp
 #set $i = 0
 #for $disk in $vm_disks
     #set $i = $i + 1
     #set $disk = os.path.basename(disk)
-disk \${disk_path}/$disk -type normal #slurp
-#end for
+if VBoxManage list hdds; egrep '^Location:.*$disk\$'; then
+	echo "Disk '$disk' is already known to the system. Skipping HD creation."
+else
+	VBoxManage openmedium disk \${disk_path}/$disk -type normal
 fi
+#end for
 
 sata=""
 if ! VBoxManage --version | grep -q "_OSE"; then sata="-sata on"; fi
