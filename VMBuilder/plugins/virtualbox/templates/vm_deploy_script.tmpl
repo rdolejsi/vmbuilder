@@ -28,28 +28,23 @@ else
 	VBoxManage createvm -name $vm_name -ostype \$os_type -register
 fi
 
+sata=""
+if ! VBoxManage --version | grep -q "_OSE"; then sata="-sata on"; fi
 
 # FIXME: test on identity needs improvement
 #set $i = 0
 #for $disk in $vm_disks
     #set $i = $i + 1
     #set $disk = os.path.basename(disk)
-if VBoxManage list hdds; egrep '^Location:.*$disk\$'; then
-	echo "Disk '$disk' is already known to the system. Skipping HD creation."
+if VBoxManage list hdds | egrep '^Location:.*$disk\$'; then
+	echo "Disk '$disk' is already known to the system. Leaving it in original state."
 else
 	VBoxManage openmedium disk \${disk_path}/$disk -type normal
-fi
-#end for
 
-sata=""
-if ! VBoxManage --version | grep -q "_OSE"; then sata="-sata on"; fi
-VBoxManage modifyvm $vm_name -memory $memory \${sata} #slurp
-#set $i = 0
-#for $disk in $vm_disks
-    #set $i = $i + 1
-    #set $disk = os.path.basename(disk)
+	VBoxManage modifyvm $vm_name -memory $memory \${sata} #slurp
+
     #if $i >= 31
-    	#break
+    	#continue
     #end if
     #if $i == 1
     	-hda \${disk_path}/$disk #slurp
@@ -60,6 +55,8 @@ VBoxManage modifyvm $vm_name -memory $memory \${sata} #slurp
     #else
         -sataport${i} \${disk_path}/$disk #slurp
     #end if
+#end for
+fi
 #end for
 
 #if $mac
