@@ -45,15 +45,15 @@ class EC2(Plugin):
         group.add_option('--ec2-bundle', action='store_true', help='Bundle the instance')
         group.add_option('--ec2-upload', action='store_true', help='Upload the instance')
         group.add_option('--ec2-register', action='store_true', help='Register the instance')
-        group.add_option('--no-amazon-tools', action='store_true', help='Do not use Amazon\'s EC2 AMI tools.')
-        group.add_option('--no-euca-tools', action='store_true', help='Do not use Eucalyptus\' EC2 AMI tools.')
+        group.add_option('--ec2-no-amazon-tools', action='store_true', help='Do not use Amazon\'s EC2 AMI tools.')
+        group.add_option('--ec2-no-euca-tools', action='store_true', help='Do not use Eucalyptus\' EC2 AMI tools.')
         self.vm.register_setting_group(group)
 
     def preflight_check(self):
         if not getattr(self.vm, 'ec2', False):
             return True
 
-        if self.vm.no_amazon_tools:
+        if self.vm.ec2_no_amazon_tools:
             logging.info("Not using Amazon ec2-tools.")
             awsec2_installed = False
         else:
@@ -64,7 +64,7 @@ class EC2(Plugin):
             else:
                 awsec2_installed = True
 
-        if self.vm.no_euca_tools:
+        if self.vm.ec2_no_euca_tools:
             logging.info("Not using Eucalyptus euca2ools.")
             euca_installed = False
         else:
@@ -80,9 +80,14 @@ class EC2(Plugin):
         elif awsec2_installed:
             self.ec2_tools_prefix = "ec2-"
         else:
-            raise VMBuilderUserError('You do not have a suitable AMI tools suite installed.')
+            if self.vm.ec2_bundle or self.vm.ec2_upload:
+                raise VMBuilderUserError('When bundling or uploading for EC2 you must have ec2-tools or euca2ools installed.')
+            else:
+                logging.warn('You do not have a suitable AMI tools suite installed, however, the current operation does not require it.')
+                self.ec2_tools_prefix = None
 
-        logging.info("EC2 tools prefix: %s" % self.ec2_tools_prefix)
+        if self.ec2_tools_prefix:
+            logging.info("Using EC2 tools prefix: %s" % self.ec2_tools_prefix)
 
         if not self.vm.hypervisor.name == 'Xen':
             raise VMBuilderUserError('When building for EC2 you must use the xen hypervisor.')
@@ -127,25 +132,6 @@ class EC2(Plugin):
         if not self.vm.ec2_version:
             raise VMBuilderUserError('When building for EC2 you must provide version info.')
 
-        if not self.vm.addpkg:
-             self.vm.addpkg = []
-
-        self.vm.addpkg += ['ec2-init',
-                          'openssh-server',
-                          'ec2-modules',
-                          'standard^',
-                          'ec2-ami-tools',
-                          'update-motd']
-
-        if self.vm.ec2_landscape:
-            logging.info('Installing landscape support')
-            self.vm.addpkg += ['landscape-client']
-
-        if not self.vm.ppa:
-            self.vm.ppa = []
-
-        self.vm.ppa += ['ubuntu-on-ec2/ppa']
-
     def post_install(self):
         if not getattr(self.vm, 'ec2', False):
             return
@@ -153,11 +139,6 @@ class EC2(Plugin):
         logging.info("Running ec2 postinstall")
 
         self.install_from_template('/etc/ec2_version', 'ec2_version', { 'version' : self.vm.ec2_version } )
-        self.install_from_template('/etc/ssh/sshd_config', 'sshd_config')
-        self.install_from_template('/etc/sudoers', 'sudoers')
-
-        if self.vm.ec2_landscape:
-            self.install_from_template('/etc/default/landscape-client', 'landscape_client')
 
         self.vm.distro.disable_hwclock_access()
 

@@ -137,6 +137,10 @@ class Debian(Distro):
                 msg = "locale-gen does not recognize your locale '%s'" % self.vm.lang
                 raise VMBuilderUserError(msg)
 
+        if hasattr(self.vm, "ec2") and self.vm.ec2:
+            self.get_ec2_kernel()
+            self.get_ec2_ramdisk()
+
     def install(self, destdir):
         self.destdir = destdir
         self.suite.install(destdir)
@@ -174,12 +178,13 @@ EOT''')
                     #Specifically, etch is called 'oldstable' in the 3rd field, to get the suite you need
                     #excavate it from the 2nd field.
 
-                    if sline[1].strip().count(self.vm.suite) > 0:
+                    if sline[1].strip().count(self.vm.suite) > 0:    def disable_hwclock_access(self):
+        return self.suite.disable_hwclock_access()
                         #Fix for Debian handling of kernel version names
                         #It's x.y.z+w, not x.y.z.w
                         vt = sline[1].strip().split('.')
-			deb_vt = vt[2].split('+')
-			vt = [vt[0], vt[1], deb_vt[0], deb_vt[1]]
+                        deb_vt = vt[2].split('+')
+                        vt = [vt[0], vt[1], deb_vt[0], deb_vt[1]]
 
                         for i in range(4):
                             if int(vt[i]) > int(version[i]):
@@ -202,5 +207,19 @@ EOT''')
         path = '/boot/initrd.img-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour)
         return path
 
+    def get_ec2_kernel(self):
+        if self.suite.ec2_kernel_info:
+            return self.suite.ec2_kernel_info[self.vm.arch]
+        else:
+            raise VMBuilderUserError('EC2 is not supported for the suite selected')
+
+    def get_ec2_ramdisk(self):
+        if self.suite.ec2_ramdisk_info:
+            return self.suite.ec2_ramdisk_info[self.vm.arch]
+        else:
+            raise VMBuilderUserError('EC2 is not supported for the suite selected')
+
+    def disable_hwclock_access(self):
+        return self.suite.disable_hwclock_access()
 
 register_distro(Debian)

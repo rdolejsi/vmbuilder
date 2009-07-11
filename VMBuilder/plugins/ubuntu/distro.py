@@ -136,9 +136,28 @@ class Ubuntu(Distro):
                 msg = "locale-gen does not recognize your locale '%s'" % self.vm.lang
                 raise VMBuilderUserError(msg)
 
-        if self.vm.ec2:
+        if hasattr(self.vm, "ec2") and self.vm.ec2:
             self.get_ec2_kernel()
             self.get_ec2_ramdisk()
+
+            if not self.vm.addpkg:
+                self.vm.addpkg = []
+
+            self.vm.addpkg += ['ec2-init',
+                              'openssh-server',
+                              'ec2-modules',
+                              'standard^',
+                              'ec2-ami-tools',
+                              'update-motd']
+
+            if self.vm.ec2_landscape:
+                logging.info('Installing landscape support')
+                self.vm.addpkg += ['landscape-client']
+
+            if not hasattr(self.vm, "ppa") or not self.vm.ppa:
+                self.vm.ppa = []
+
+            self.vm.ppa += ['ubuntu-on-ec2/ppa']
 
     def install(self, destdir):
         self.destdir = destdir
@@ -211,5 +230,15 @@ EOT''')
 
     def disable_hwclock_access(self):
         return self.suite.disable_hwclock_access()
+
+    def post_install(self):
+        #Ubuntu postinstalll for EC2 functionality.
+        #These particular packages are stored in the ec2 directory.
+        if hasattr(self.vm, "ec2") and self.vm.ec2:
+            self.install_from_template('/etc/ssh/sshd_config', 'ec2/sshd_config')
+            self.install_from_template('/etc/sudoers', 'ec2/sudoers')
+
+            if self.vm.ec2_landscape:
+                self.install_from_template('/etc/default/landscape-client', 'ec2/landscape_client')
 
 register_distro(Ubuntu)

@@ -37,15 +37,15 @@ class Hardy(Gutsy):
         self.run_in_target('chmod', '755', '/etc/update-motd.d/51_update-motd')
 
     def xen_kernel_path(self):
-	rcmd = run_cmd('chroot', self.destdir, 'dpkg', '-S', 'xen')
-	temp = rcmd[0].split(": ")
-	xen_kernel = temp[0].split("linux-image-")
-	path = '/boot/vmlinuz-%s' %xen_kernel
-	return path
+        rcmd = run_cmd('chroot', self.destdir, 'dpkg', '-S', 'xen')
+        temp = rcmd[0].split(": ")
+        xen_kernel = temp[0].split("linux-image-")
+        path = '/boot/vmlinuz-%s' %xen_kernel
+        return path
 
     def xen_ramdisk_path(self):
-	rcmd = run_cmd('chroot', self.destdir, 'dpkg', '-S', 'xen')
-	temp = rcmd[0].split(": ")
-	xen_ramdisk = temp[0].split("linux-image-")
-	path = '/boot/initrd.img-%s' %xen_ramdisk
-	return path
+        rcmd = run_cmd('chroot', self.destdir, 'dpkg', '-S', 'xen')
+        temp = rcmd[0].split(": ")
+        xen_ramdisk = temp[0].split("linux-image-")
+        path = '/boot/initrd.img-%s' %xen_ramdisk
+        return path

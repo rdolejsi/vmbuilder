@@ -360,3 +360,10 @@ class Etch(suite.Suite):
         #TODO: Change to Debian appropriate MOTD
         #self.install_from_template('/etc/update-motd.d/51_update-motd', '51_update-motd-hardy')
         #self.run_in_target('chmod', '755', '/etc/update-motd.d/51_update-motd')
+
+    def disable_hwclock_access(self):
+        #Selflessly stolen from dapper.py.
+        #Needed for EC2 usage.
+        fp = open('%s/etc/default/rcS' % self.destdir, 'a')
+        fp.write('HWCLOCKACCESS=no')
+        fp.close()
