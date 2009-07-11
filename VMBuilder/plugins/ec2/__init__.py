@@ -47,6 +47,7 @@ class EC2(Plugin):
         group.add_option('--ec2-register', action='store_true', help='Register the instance')
         group.add_option('--ec2-no-amazon-tools', action='store_true', help='Do not use Amazon\'s EC2 AMI tools.')
         group.add_option('--ec2-no-euca-tools', action='store_true', help='Do not use Eucalyptus\' EC2 AMI tools.')
+        group.add_option('--ec2-url', metavar='EC2_URL', help='URL of EC2 or compatible cluster.')
         self.vm.register_setting_group(group)
 
     def preflight_check(self):
@@ -159,7 +160,16 @@ class EC2(Plugin):
 
                 if self.vm.ec2_register:
                     from boto.ec2.connection import EC2Connection
-                    conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key)
+
+                    #Code added to support Eucalyptus and other EC2-compatible clusters
+                    if self.vm.ec2_url:
+                        import urlparse
+                        parsed_url = urlparse.urlparse(self.vm.ec2_url)
+                        conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key,
+                            host = parsed_url.hostname, port = parsed_url.port, path = parsed_url.path)
+                    else:
+                        conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key)
+
                     conn.register_image('%s/%s.manifest.xml' % (self.vm.ec2_bucket, self.vm.ec2_name))
             else:
                 self.vm.result_files.append(manifest)
