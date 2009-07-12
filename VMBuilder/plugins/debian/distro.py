@@ -178,8 +178,7 @@ EOT''')
                     #Specifically, etch is called 'oldstable' in the 3rd field, to get the suite you need
                     #excavate it from the 2nd field.
 
-                    if sline[1].strip().count(self.vm.suite) > 0:    def disable_hwclock_access(self):
-        return self.suite.disable_hwclock_access()
+                    if sline[1].strip().count(self.vm.suite) > 0:
                         #Fix for Debian handling of kernel version names
                         #It's x.y.z+w, not x.y.z.w
                         vt = sline[1].strip().split('.')
