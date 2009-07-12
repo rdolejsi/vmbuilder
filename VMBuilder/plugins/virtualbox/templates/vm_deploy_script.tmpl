@@ -42,20 +42,18 @@ else
 	VBoxManage openmedium disk \${disk_path}/$disk -type normal
 
 	VBoxManage modifyvm $vm_name -memory $memory \${sata} #slurp
-
     #if $i >= 31
     	#continue
     #end if
     #if $i == 1
-    	-hda \${disk_path}/$disk #slurp
+-hda \${disk_path}/$disk #slurp
     #else if $i == 2
-    	-hdb \${disk_path}/$disk #slurp
+-hdb \${disk_path}/$disk #slurp
     #else if $i == 3
-    	-hdd \${disk_path}/$disk #slurp
+-hdd \${disk_path}/$disk #slurp
     #else
-        -sataport${i} \${disk_path}/$disk #slurp
+-sataport${i} \${disk_path}/$disk
     #end if
-#end for
 fi
 #end for
 
