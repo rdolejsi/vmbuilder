@@ -112,5 +112,5 @@ class Lenny(Etch):
     def fix_grub_menu_lst_root(self):
         # Extremely dirty hack to fix the root parameters in menu.lst to (hd0,0)
         bootdev = disk.bootpart(self.vm.disks)
-        run_cmd('sed', '-ie', 's/root[ \t]*\([^)]*\)/(hd0,0)/g', '%s/boot/grub/menu.lst' % self.destdir)
+        run_cmd('sed', '-ie', 's/([^)]*)/(hd0,0)/', '%s/boot/grub/menu.lst' % self.destdir)
         
