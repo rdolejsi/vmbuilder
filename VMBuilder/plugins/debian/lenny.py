@@ -64,16 +64,36 @@ class Lenny(Etch):
 
     def debootstrap(self):
         Etch.debootstrap(self)
+        self.bind_system_devices(True)
 
-        run_cmd('mount', '--bind', '/dev', '%s/dev' % self.destdir)
-        self.vm.add_clean_cmd('umount', '%s/dev' % self.destdir, ignore_fail=True)
+    def bind_system_devices(self):
+        #Mounts the system's /dev, /dev/pts, and /proc on top of ours.
+        #Also adds the appropriate umount commands to the cleanup phase.
+        if self.hasattr("system_devices_mounted") and self.system_devices_mounted:
+            run_cmd('mount', '--bind', '/dev', '%s/dev' % self.destdir)
+            self.vm.add_clean_cmd('umount', '%s/dev' % self.destdir, ignore_fail=True)
 
-        run_cmd('mount', '--bind', '/dev/pts', '%s/dev/pts' % self.destdir)
-        self.vm.add_clean_cmd('umount', '%s/dev/pts' % self.destdir, ignore_fail=True)
+            run_cmd('mount', '--bind', '/dev/pts', '%s/dev/pts' % self.destdir)
+            self.vm.add_clean_cmd('umount', '%s/dev/pts' % self.destdir, ignore_fail=True)
 
-        run_cmd('mount', '-t', 'proc', 'proc', '%s/proc' % self.destdir)
-        self.vm.add_clean_cmd('umount', '%s/proc' % self.destdir, ignore_fail=True)
+            run_cmd('mount', '-t', 'proc', 'proc', '%s/proc' % self.destdir)
+            self.vm.add_clean_cmd('umount', '%s/proc' % self.destdir, ignore_fail=True)
 
+            self.system_devices_mounted = True
+
+    def unbind_system_devices(self):
+        #Opposite of bind_system_devices.
+        #Also removes the cleanup commands.
+        else self.hasattr("system_devices_mounted") and self.system_devices_mounted:
+            run_cmd('umount', '%s/dev' % self.destdir)
+            self.vm.remove_clean_cmd('umount', '%s/dev' % self.destdir, ignore_fail=True)
+
+            run_cmd('umount', '%s/dev/pts' % self.destdir)
+            self.vm.remove_clean_cmd('umount', '%s/dev/pts' % self.destdir, ignore_fail=True)
+
+            run_cmd('umount', '%s/proc' % self.destdir)
+            self.vm.remove_clean_cmd('umount', '%s/proc' % self.destdir, ignore_fail=True)
+            self.system_devices_mounted = False
 
     def copy_settings(self):
         self.copy_to_target('/etc/default/locale', '/etc/default/locale')
@@ -113,4 +133,10 @@ class Lenny(Etch):
         # Extremely dirty hack to fix the root parameters in menu.lst to (hd0,0)
         bootdev = disk.bootpart(self.vm.disks)
         run_cmd('sed', '-ie', 's/([^)]*)/(hd0,0)/', '%s/boot/grub/menu.lst' % self.destdir)
+
+    def create_devices(self):
+        #Having system devices bound makes device creation fail.
+        self.unbind_system_devices()
+        Etch.create_devices(self)
+        self.bind_system_devices()
         
