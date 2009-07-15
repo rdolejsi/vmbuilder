@@ -64,7 +64,7 @@ class Lenny(Etch):
 
     def debootstrap(self):
         Etch.debootstrap(self)
-        self.bind_system_devices(True)
+        self.bind_system_devices()
 
     def bind_system_devices(self):
         #Mounts the system's /dev, /dev/pts, and /proc on top of ours.
