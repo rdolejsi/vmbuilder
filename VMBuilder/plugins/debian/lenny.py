@@ -84,7 +84,7 @@ class Lenny(Etch):
     def unbind_system_devices(self):
         #Opposite of bind_system_devices.
         #Also removes the cleanup commands.
-        else self.hasattr("system_devices_mounted") and self.system_devices_mounted:
+        if self.hasattr("system_devices_mounted") and self.system_devices_mounted:
             run_cmd('umount', '%s/dev' % self.destdir)
             self.vm.remove_clean_cmd('umount', '%s/dev' % self.destdir, ignore_fail=True)
 
