@@ -69,7 +69,7 @@ class Lenny(Etch):
     def bind_system_devices(self):
         #Mounts the system's /dev, /dev/pts, and /proc on top of ours.
         #Also adds the appropriate umount commands to the cleanup phase.
-        if self.hasattr("system_devices_mounted") and self.system_devices_mounted:
+        if not hasattr(self, "system_devices_mounted") or not self.system_devices_mounted:
             run_cmd('mount', '--bind', '/dev', '%s/dev' % self.destdir)
             self.vm.add_clean_cmd('umount', '%s/dev' % self.destdir, ignore_fail=True)
 
@@ -84,7 +84,7 @@ class Lenny(Etch):
     def unbind_system_devices(self):
         #Opposite of bind_system_devices.
         #Also removes the cleanup commands.
-        if self.hasattr("system_devices_mounted") and self.system_devices_mounted:
+        if hasattr(self, "system_devices_mounted") and self.system_devices_mounted:
             run_cmd('umount', '%s/dev' % self.destdir)
             self.vm.remove_clean_cmd('umount', '%s/dev' % self.destdir, ignore_fail=True)
 
@@ -93,6 +93,7 @@ class Lenny(Etch):
 
             run_cmd('umount', '%s/proc' % self.destdir)
             self.vm.remove_clean_cmd('umount', '%s/proc' % self.destdir, ignore_fail=True)
+
             self.system_devices_mounted = False
 
     def copy_settings(self):
