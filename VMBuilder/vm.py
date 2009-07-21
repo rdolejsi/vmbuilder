@@ -146,6 +146,7 @@ class VM(object):
         self.register_setting('-d', '--dest', dest='destdir', help='Specify the destination directory. [default: <hypervisor>-<distro>].')
         self.register_setting('-c', '--config',  type='string', help='Specify a additional configuration file')
         self.register_setting('--debug', action='callback', callback=log.set_verbosity, help='Show debug information')
+        self.register_setting('--pause-on-failure', action='store_true', default=False, help='Sleep for 10 seconds if an exception occurs, for debugging usage')
         self.register_setting('-v', '--verbose', action='callback', callback=log.set_verbosity, help='Show progress information')
         self.register_setting('-q', '--quiet', action='callback', callback=log.set_verbosity, help='Silent operation')
         self.register_setting('-t', '--tmp', default=os.environ.get('TMPDIR', '/tmp'), help='Use TMP as temporary working space for image generation. Defaults to $TMPDIR if it is defined or /tmp otherwise. [default: %default]')
@@ -504,6 +505,12 @@ class VM(object):
         finally:
             if not finished:
                 logging.debug("Oh, dear, an exception occurred")
+                #Option to make it easier to debug exceptions
+                if self.pause_on_failure:
+                    import time
+                    logging.info("VMbuilder has been paused for 10 seconds. Press ^Z to suspend, or forever hold your peace...")
+                    time.sleep(10)
+
             self.cleanup()
 
 class _MyOptParser(optparse.OptionParser):
