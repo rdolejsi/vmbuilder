@@ -85,14 +85,14 @@ class Lenny(Etch):
         #Opposite of bind_system_devices.
         #Also removes the cleanup commands.
         if hasattr(self, "system_devices_mounted") and self.system_devices_mounted:
-            run_cmd('umount', '%s/dev' % self.destdir)
-            self.vm.remove_clean_cmd('umount', '%s/dev' % self.destdir, ignore_fail=True)
-
             run_cmd('umount', '%s/dev/pts' % self.destdir)
-            self.vm.remove_clean_cmd('umount', '%s/dev/pts' % self.destdir, ignore_fail=True)
+            #self.vm.remove_clean_cmd('umount', '%s/dev/pts' % self.destdir, ignore_fail=True)
+
+            run_cmd('umount', '%s/dev' % self.destdir)
+            #self.vm.remove_clean_cmd('umount', '%s/dev' % self.destdir, ignore_fail=True)
 
             run_cmd('umount', '%s/proc' % self.destdir)
-            self.vm.remove_clean_cmd('umount', '%s/proc' % self.destdir, ignore_fail=True)
+            #self.vm.remove_clean_cmd('umount', '%s/proc' % self.destdir, ignore_fail=True)
 
             self.system_devices_mounted = False
 

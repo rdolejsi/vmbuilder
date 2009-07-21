@@ -29,6 +29,7 @@ import textwrap
 import socket
 import struct
 import urllib
+import time
 import VMBuilder
 import VMBuilder.util      as util
 import VMBuilder.log       as log
@@ -491,6 +492,7 @@ class VM(object):
 
             self.install()
 
+            time.sleep(60)
             self.umount_partitions()
 
             self.hypervisor.finalize()
