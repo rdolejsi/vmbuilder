@@ -509,7 +509,6 @@ class VM(object):
                 logging.debug("Oh, dear, an exception occurred")
                 #Option to make it easier to debug exceptions
                 if self.pause_on_failure:
-                    import time
                     logging.info("VMbuilder has been paused for 10 seconds. Press ^Z to suspend, or forever hold your peace...")
                     time.sleep(10)
 
