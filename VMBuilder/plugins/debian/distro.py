@@ -126,7 +126,7 @@ class Debian(Distro):
                 self.vm.components = self.vm.components.split(',')
 
         if self.vm.hypervisor.name == 'Xen':
-            logging.info('Xen kernel default: linux-image-2.6-%s-%s', self.suite.xen_kernel_flavour, self.vm.arch)
+            logging.info('Xen kernel default: linux-image-2.6-%s-%s', self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
 
         self.vm.virtio_net = self.use_virtio_net()
 
@@ -165,7 +165,7 @@ setup (hd0)
 EOT''')
 
     def find_linux_kernel(self, suite, flavour, arch):
-        rmad = run_cmd('rmadison', 'linux-image-2.6-%s-%s' % (flavour, arch)
+        rmad = run_cmd('rmadison', 'linux-image-2.6-%s-%s' % (flavour, arch))
         version = ['0', '0','0', '0']
 
         for line in rmad.splitlines():
@@ -199,7 +199,7 @@ EOT''')
                 logging.debug("Searching for %s flavour Xen kernel..." % self.suite.default_flavour[self.vm.arch])
                 xen_kernel = self.find_linux_kernel(self.vm.suite, self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
 
-                if xen_kernel = None:
+                if xen_kernel == None:
                     logging.debug('Default kernel flavour %s does not have Xen available for this suite.' % self.suite.default_flavour[self.vm.arch])
                     if self.suite.valid_flavours[self.vm.arch] > 0:
                         for flavour in self.suite.valid_flavours[self.vm.arch]:
@@ -207,9 +207,10 @@ EOT''')
                                 logging.debug("Trying alternate flavour %s..." % flavour)
                                 xen_kernel = self.find_linux_kernel(self.vm.suite, self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
                                 if xen_kernel != None:
+                                    logging.debug("Using flavor %s, kernel version %s" % (flavour, xen_kernel))
                                     break
 
-                if xen_kernel = None:
+                if xen_kernel == None:
                     raise VMBuilderException('There is no valid Xen kernel for the suite selected.')
                 
                 self.xen_kernel = xen_kernel
