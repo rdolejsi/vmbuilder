@@ -196,19 +196,21 @@ EOT''')
     def xen_kernel_version(self):
         if self.suite.xen_kernel_flavour:
             if not self.xen_kernel:
-                logging.debug("Searching for %s flavour Xen kernel..." % self.suite.default_flavour[self.vm.arch])
+                logging.debug("Searching for %s-%s flavour Xen kernel..." % (self.suite.xen_kernel_flavour, self.self.suite.default_flavour[self.vm.arch]))
                 xen_kernel = self.find_linux_kernel(self.vm.suite, self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
 
                 if xen_kernel == None:
-                    logging.debug('Default kernel flavour %s does not have Xen available for this suite.' % self.suite.default_flavour[self.vm.arch])
+                    logging.debug('Default Xen kernel flavour %s-%s is not available for this suite.' % (self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch]))
                     if self.suite.valid_flavours[self.vm.arch] > 0:
                         for flavour in self.suite.valid_flavours[self.vm.arch]:
                             if flavour != self.suite.default_flavour[self.vm.arch]:
-                                logging.debug("Trying alternate flavour %s..." % flavour)
+                                logging.debug("Trying alternate flavour %s-%s..." % (self.suite.xen_kernel_flavour, flavour))
                                 xen_kernel = self.find_linux_kernel(self.vm.suite, self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
                                 if xen_kernel != None:
-                                    logging.debug("Using flavor %s, kernel version %s" % (flavour, xen_kernel))
+                                    logging.info("Using Xen kernel linux-image-2.6-%s-%s, package version %s" % (self.suite.xen_kernel_flavour, flavour, xen_kernel))
                                     break
+                else:
+                    logging.info("Using Xen kernel linux-image-2.6-%s-%s, package version %s" % (self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch], xen_kernel))
 
                 if xen_kernel == None:
                     raise VMBuilderException('There is no valid Xen kernel for the suite selected.')
