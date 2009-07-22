@@ -164,36 +164,55 @@ class Debian(Distro):
 setup (hd0)
 EOT''')
 
+    def find_linux_kernel(self, suite, flavour, arch):
+        rmad = run_cmd('rmadison', 'linux-image-2.6-%s-%s' % (flavour, arch)
+        version = ['0', '0','0', '0']
+
+        for line in rmad.splitlines():
+            sline = line.split('|')
+                    
+            #Linux XEN kernel is referred to in Debian by rmadison as:
+            #linux-image-2.6-xen-amd64 | 2.6.18+6etch3 |     oldstable | amd64
+            #Specifically, etch is called 'oldstable' in the 3rd field, to get the suite you need
+            #excavate it from the 2nd field.
+
+            if sline[1].strip().count(suite) > 0:
+                #Fix for Debian handling of kernel version names
+                #It's x.y.z+w, not x.y.z.w
+                vt = sline[1].strip().split('.')
+                deb_vt = vt[2].split('+')
+                vt = [vt[0], vt[1], deb_vt[0], deb_vt[1]]
+
+                for i in range(4):
+                    if int(vt[i]) > int(version[i]):
+                        version = vt
+                        break
+
+        if version[0] != '0':
+            return '%s.%s.%s-%s' % (version[0],version[1],version[2],version[3])
+        
+        return None
+
     def xen_kernel_version(self):
         if self.suite.xen_kernel_flavour:
             if not self.xen_kernel:
-                rmad = run_cmd('rmadison', 'linux-image-2.6-%s-%s' % (self.suite.xen_kernel_flavour, self.vm.arch))
-                version = ['0', '0','0', '0']
+                logging.debug("Searching for %s flavour Xen kernel..." % self.suite.default_flavour[self.vm.arch])
+                xen_kernel = self.find_linux_kernel(self.vm.suite, self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
 
-                for line in rmad.splitlines():
-                    sline = line.split('|')
-                    
-                    #Linux XEN kernel is referred to in Debian by rmadison as:
-                    #linux-image-2.6-xen-amd64 | 2.6.18+6etch3 |     oldstable | amd64
-                    #Specifically, etch is called 'oldstable' in the 3rd field, to get the suite you need
-                    #excavate it from the 2nd field.
+                if xen_kernel = None:
+                    logging.debug('Default kernel flavour %s does not have Xen available for this suite.' % self.suite.default_flavour[self.vm.arch])
+                    if self.suite.valid_flavours[self.vm.arch] > 0:
+                        for flavour in self.suite.valid_flavours[self.vm.arch]:
+                            if flavour != self.suite.default_flavour[self.vm.arch]:
+                                logging.debug("Trying alternate flavour %s..." % flavour)
+                                xen_kernel = self.find_linux_kernel(self.vm.suite, self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
+                                if xen_kernel != None:
+                                    break
 
-                    if sline[1].strip().count(self.vm.suite) > 0:
-                        #Fix for Debian handling of kernel version names
-                        #It's x.y.z+w, not x.y.z.w
-                        vt = sline[1].strip().split('.')
-                        deb_vt = vt[2].split('+')
-                        vt = [vt[0], vt[1], deb_vt[0], deb_vt[1]]
-
-                        for i in range(4):
-                            if int(vt[i]) > int(version[i]):
-                                version = vt
-                                break
-
-                if version[0] == '0':
-                    raise VMBuilderException('Something is wrong, no valid xen kernel for the suite %s found by rmadison' % self.vm.suite)
+                if xen_kernel = None:
+                    raise VMBuilderException('There is no valid Xen kernel for the suite selected.')
                 
-                self.xen_kernel = '%s.%s.%s-%s' % (version[0],version[1],version[2],version[3])
+                self.xen_kernel = xen_kernel
             return self.xen_kernel
         else:
             raise VMBuilderUserError('There is no valid xen kernel for the suite selected.')

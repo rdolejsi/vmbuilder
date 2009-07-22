@@ -35,7 +35,7 @@ class Lenny(Etch):
     valid_flavours = { 'i386' :  ['486', '686', '686-bigmem'],
                        'amd64' : ['amd64']}
     default_flavour = { 'i386' : '686', 'amd64' : 'amd64' }
-    xen_kernel_flavour = 'server'
+    xen_kernel_flavour = 'xen'
 
     def install(self, destdir):
         Etch.install(self, destdir)
