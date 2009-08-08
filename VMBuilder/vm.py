@@ -108,9 +108,6 @@ class VM(object):
     def add_clean_cb(self, cb):
         self._cleanup_cbs.insert(0, cb)
 
-    def remove_clean_cb(self, cb):
-        self._cleanup_cbs.remove(cb)
-
     def add_clean_cmd(self, *argv, **kwargs):
         cb = lambda : util.run_cmd(*argv, **kwargs)
         self.add_clean_cb(cb)
@@ -118,7 +115,7 @@ class VM(object):
 
     def remove_clean_cmd(self, *argv, **kwargs):
         cb = lambda : util.run_cmd(*argv, **kwargs)
-        self.remove_clean_cb(cb)
+        self.cancel_cleanup(cb)
         return cb
 
     def cancel_cleanup(self, cb):

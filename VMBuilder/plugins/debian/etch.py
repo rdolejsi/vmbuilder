@@ -46,6 +46,7 @@ class Etch(suite.Suite):
     virtio_net = False
 
     ec2_kernel_info = { 'i386' : 'aki-9b00e5f2', 'amd64' : 'aki-9800e5f1' }
+    ec2_ramdisk_info = { 'i386' : 'ari-cant-be-arsed', 'amd64' : 'ari-to-look-that-up' }
 
     def check_kernel_flavour(self, arch, flavour):
         return flavour in self.valid_flavours[arch]
@@ -349,8 +350,6 @@ class Etch(suite.Suite):
 
     def install_ec2(self):
 	#Mostly ported over from the Ubuntu install_ec2 commands
-        self.run_in_target('apt-get' ,'--force-yes', '-y', 'install', 'libc6-xen')
-        self.run_in_target('apt-get','--purge','--force-yes', '-y', 'remove', 'libc6-i686')
         #TODO: etch doesn't use Upstart, port over to init scripts
         #Basically, it makes it setup a getty console on xvc0
         #self.install_from_template('/etc/event.d/xvc0', 'upstart', { 'console' : 'xvc0' })

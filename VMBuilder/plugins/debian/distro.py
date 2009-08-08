@@ -40,6 +40,7 @@ class Debian(Distro):
                     'i386' : [ 'i386' ] }
 
     xen_kernel = ''
+    kernel = ''
 
     def register_options(self):
         group = self.vm.setting_group('Package options')
@@ -120,7 +121,7 @@ class Debian(Distro):
                                                                                                       ' '.join(self.valid_archs[self.host_arch])))
 
         if not self.vm.components:
-            self.vm.components = ['main', 'restricted', 'universe']
+            self.vm.components = ['main', 'contrib']
         else:
             if type(self.vm.components) is str:
                 self.vm.components = self.vm.components.split(',')
@@ -165,7 +166,10 @@ setup (hd0)
 EOT''')
 
     def find_linux_kernel(self, suite, flavour, arch):
-        rmad = run_cmd('rmadison', 'linux-image-2.6-%s-%s' % (flavour, arch))
+        if flavour == None:
+            rmad = run_cmd('rmadison', 'linux-image-2.6-%s' % (arch))
+        else:
+            rmad = run_cmd('rmadison', 'linux-image-2.6-%s-%s' % (flavour, arch))
         version = ['0', '0','0', '0']
 
         for line in rmad.splitlines():
@@ -190,13 +194,13 @@ EOT''')
 
         if version[0] != '0':
             return '%s.%s.%s-%s' % (version[0],version[1],version[2],version[3])
-        
-        return None
+        else:
+            return None
 
     def xen_kernel_version(self):
         if self.suite.xen_kernel_flavour:
             if not self.xen_kernel:
-                logging.debug("Searching for %s-%s flavour Xen kernel..." % (self.suite.xen_kernel_flavour, self.self.suite.default_flavour[self.vm.arch]))
+                logging.debug("Searching for %s-%s flavour Xen kernel..." % (self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch]))
                 xen_kernel = self.find_linux_kernel(self.vm.suite, self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
 
                 if xen_kernel == None:
@@ -219,6 +223,28 @@ EOT''')
             return self.xen_kernel
         else:
             raise VMBuilderUserError('There is no valid xen kernel for the suite selected.')
+
+    #Ugly kludge to avoid breaking old code that relies on xen_kernel_path
+
+    def kernel_path(self):
+        if not isinstance(self.vm.hypervisor, VMBuilder.plugins.xen.Xen):
+            return self.__kernel_path()
+        else:
+            return self.xen_kernel_path()
+
+    def ramdisk_path(self):
+        if not isinstance(self.vm.hypervisor, VMBuilder.plugins.xen.Xen):
+            return self.__ramdisk_path()
+        else:
+            return self.xen_ramdisk_path()
+
+    def __kernel_path(self):
+        path = '/boot/vmlinuz-%s' % self.find_linux_kernel(self.suite, flavour = None, arch = self.vm.arch)
+        return path
+
+    def __ramdisk_path(self):
+        path = '/boot/initrd.img-%s' % self.find_linux_kernel(self.suite, flavour = None, arch = self.vm.arch)
+        return path
 
     def xen_kernel_path(self):
         path = '/boot/vmlinuz-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour)
