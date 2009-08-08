@@ -239,19 +239,19 @@ EOT''')
             return self.xen_ramdisk_path()
 
     def __kernel_path(self):
-        path = '/boot/vmlinuz-%s' % self.find_linux_kernel(self.suite, flavour = None, arch = self.vm.arch)
+        path = '/boot/vmlinuz-%s-%s' % (self.find_linux_kernel(self.suite, flavour = None, arch = self.vm.arch), self.suite.default_flavour[self.vm.arch])
         return path
 
     def __ramdisk_path(self):
-        path = '/boot/initrd.img-%s' % self.find_linux_kernel(self.suite, flavour = None, arch = self.vm.arch)
+        path = '/boot/initrd.img-%s-%s' % (self.find_linux_kernel(self.suite, flavour = None, arch = self.vm.arch), self.suite.default_flavour[self.vm.arch])
         return path
 
     def xen_kernel_path(self):
-        path = '/boot/vmlinuz-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour)
+        path = '/boot/vmlinuz-%s-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
         return path
 
     def xen_ramdisk_path(self):
-        path = '/boot/initrd.img-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour)
+        path = '/boot/initrd.img-%s-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
         return path
 
     def get_ec2_kernel(self):

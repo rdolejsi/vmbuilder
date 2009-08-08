@@ -91,6 +91,9 @@ class Etch(suite.Suite):
 
             logging.debug("Creating device.map")
             self.install_device_map()
+        else:
+            logging.debug("Installing kernel")
+            self.install_kernel_without_bootloader()
 
         logging.debug("Installing extra packages")
         self.install_extras()
@@ -165,7 +168,10 @@ class Etch(suite.Suite):
         self.update_passwords()
 
     def kernel_name(self):
-        return 'linux-image-2.6-%s' % (self.vm.flavour or self.default_flavour[self.vm.arch],)
+        if not isinstance(self.vm.hypervisor, VMBuilder.plugins.xen.Xen):
+            return 'linux-image-2.6-%s' % (self.vm.flavour or self.default_flavour[self.vm.arch],)
+        else:
+            return 'linux-image-2.6-%s-%s' % (self.xen_kernel_flavour, self.vm.flavour or self.default_flavour[self.vm.arch])
 
     def config_network(self):
         self.vm.install_file('/etc/hostname', self.vm.hostname)
@@ -284,6 +290,10 @@ class Etch(suite.Suite):
     def install_kernel(self):
         self.install_from_template('/etc/kernel-img.conf', 'kernelimg', { 'updategrub' : self.updategrub }) 
         run_cmd('chroot', self.destdir, 'apt-get', '--force-yes', '-y', 'install', self.kernel_name(), 'grub')
+
+    def install_kernel_without_bootloader(self):
+        self.install_from_template('/etc/kernel-img.conf', 'kernelimg', { 'updategrub' : '/bin/true' }) 
+        run_cmd('chroot', self.destdir, 'apt-get', '--force-yes', '-y', 'install', self.kernel_name())
 
     def install_grub(self):
         self.run_in_target('apt-get', '--force-yes', '-y', 'install', 'grub')
