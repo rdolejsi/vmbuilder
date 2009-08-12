@@ -45,6 +45,8 @@ class EC2(Plugin):
         group.add_option('--ec2-no-amazon-tools', action='store_true', help='Do not use Amazon\'s EC2 AMI tools.')
         group.add_option('--ec2-no-euca-tools', action='store_true', help='Do not use Eucalyptus\' EC2 AMI tools.')
         group.add_option('--ec2-url', metavar='EC2_URL', help='URL of EC2 or compatible cluster.')
+        group.add_option('--ec2-s3-url', metavar='S3_URL', help='URL of EC2 or compatible cluster\'s S3 server.')
+        group.add_option('--ec2-cloud-cert', metavar='EUCALYPTUS_CERT', help='Certificate of EC2-compatible cluster.')
         group.add_option('--ec2-is-eucalyptus', action='store_true', help='Allow the use of Eucalyptus-specific features like KVM.')
         group.add_option('--ec2-bundle-kernel', action='store_true', help='Bundle the kernel and ramdisk.')
         group.add_option('--ec2-upload-kernel', action='store_true', help='Upload the kernel and ramdisk.')
@@ -55,7 +57,7 @@ class EC2(Plugin):
         if not getattr(self.vm, 'ec2', False):
             return True
 
-        #NOW, actually check if we can do EC2
+        #NOW, actually check if we can do EC2. Also check if we can take advantage of Euca's KVM support
         if not isinstance(self.vm.hypervisor, VMBuilder.plugins.xen.Xen):
             if not (self.vm.ec2_is_eucalyptus and isinstance(self.vm.hypervisor, VMBuilder.plugins.kvm.KVM)):
                 raise VMBuilderUserError("You must use either Xen or KVM on Eucalyptus")
@@ -105,6 +107,15 @@ class EC2(Plugin):
             if not self.vm.ec2_name:
                 raise VMBuilderUserError('When building for EC2 you must supply the name for the image.')
 
+            if not self.vm.ec2_url and "EC2_URL" in os.environ:
+                self.vm.ec2_url = os.environ["EC2_URL"]
+
+            if not self.vm.ec2_s3_url and "S3_URL" in os.environ:
+                self.vm.ec2_s3_url = os.environ["S3_URL"]
+
+            if not self.vm.ec2_cloud_cert and "EUCALYPTUS_CERT" in os.environ:
+                self.vm.ec2_cloud_cert = os.environ["EUCALYPTUS_CERT"]
+
             if not self.vm.ec2_cert:
                 if "EC2_CERT" in os.environ:
                     self.vm.ec2_cert = os.environ["EC2_CERT"]
@@ -135,7 +146,7 @@ class EC2(Plugin):
 
                 if not self.vm.ec2_secret_key:
                     if "EC2_SECRET_KEY" in os.environ:
-                        self.vm.ec2_access_key = os.environ["EC2_SECRET_KEY"]
+                        self.vm.ec2_secret_key = os.environ["EC2_SECRET_KEY"]
                     else:
                         raise VMBuilderUserError('When building for EC2 you must provide your AWS secret access key.')
 
@@ -168,89 +179,177 @@ class EC2(Plugin):
             kernel_loc = self.vm.distro.kernel_path()
             ramdisk_loc = self.vm.distro.ramdisk_path()
 
-            bundle_cmdline = ['%sbundle-image' % self.ec2_tools_prefix, '--image', "%s%s" % (installdir, kernel_loc), '--cert', self.vm.ec2_cert, '--privatekey', self.vm.ec2_key, '--user', self.vm.ec2_user, '--prefix', self.vm.ec2_name, '-r', ['i386', 'x86_64'][self.vm.arch == 'amd64'], '-d', self.vm.workdir, '--kernel', 'true']
+            kernel_name = os.path.split(kernel_loc)[1]
+
+            if self.vm.ec2_cloud_cert:
+                bundle_cmdline = ['%sbundle-image' % self.ec2_tools_prefix, '--image', "%s%s" % (installdir, kernel_loc), '--cert', self.vm.ec2_cert, '--privatekey', self.vm.ec2_key, '--user', self.vm.ec2_user, '--prefix', kernel_name, '-r', ['i386', 'x86_64'][self.vm.arch == 'amd64'], '-d', self.vm.destdir, '--kernel', 'true', '--ec2cert', self.vm.ec2_cloud_cert]
+            else:
+                bundle_cmdline = ['%sbundle-image' % self.ec2_tools_prefix, '--image', "%s%s" % (installdir, kernel_loc), '--cert', self.vm.ec2_cert, '--privatekey', self.vm.ec2_key, '--user', self.vm.ec2_user, '--prefix', kernel_name, '-r', ['i386', 'x86_64'][self.vm.arch == 'amd64'], '-d', self.vm.destdir, '--kernel', 'true']
+
             run_cmd(*bundle_cmdline)
 
-            kernel_name = os.path.split(kernel_loc)[1]
-            kernel_manifest = '%s/%s.manifest.xml' % (self.vm.workdir, kernel_name)
+            kernel_manifest = '%s/%s.manifest.xml' % (self.vm.destdir, kernel_name)
 
             if ramdisk_loc != None:
-                bundle_cmdline = ['%sbundle-image' % self.ec2_tools_prefix, '--image', "%s%s" % (installdir, ramdisk_loc), '--cert', self.vm.ec2_cert, '--privatekey', self.vm.ec2_key, '--user', self.vm.ec2_user, '--prefix', self.vm.ec2_name, '-r', ['i386', 'x86_64'][self.vm.arch == 'amd64'], '-d', self.vm.workdir, '--ramdisk', 'true']
+                ramdisk_name = os.path.split(ramdisk_loc)[1]
+
+                if self.vm.ec2_cloud_cert:
+                    bundle_cmdline = ['%sbundle-image' % self.ec2_tools_prefix, '--image', "%s%s" % (installdir, ramdisk_loc), '--cert', self.vm.ec2_cert, '--privatekey', self.vm.ec2_key, '--user', self.vm.ec2_user, '--prefix', ramdisk_name, '-r', ['i386', 'x86_64'][self.vm.arch == 'amd64'], '-d', self.vm.destdir, '--ramdisk', 'true', '--ec2cert', self.vm.ec2_cloud_cert]
+                else:
+                    bundle_cmdline = ['%sbundle-image' % self.ec2_tools_prefix, '--image', "%s%s" % (installdir, ramdisk_loc), '--cert', self.vm.ec2_cert, '--privatekey', self.vm.ec2_key, '--user', self.vm.ec2_user, '--prefix', ramdisk_name, '-r', ['i386', 'x86_64'][self.vm.arch == 'amd64'], '-d', self.vm.destdir, '--ramdisk', 'true']
 
                 run_cmd(*bundle_cmdline)
-
-                ramdisk_name = os.path.split(ramdisk_loc)[1]
-                ramdisk_manifest = '%s/%s.manifest.xml' % (self.vm.workdir, ramdisk_name)
+                ramdisk_manifest = '%s/%s.manifest.xml' % (self.vm.destdir, ramdisk_name)
 
             if self.vm.ec2_upload_kernel:
                 logging.info("Uploading EC2 kernel bundle")
 
-                upload_cmdline = ['%supload-bundle' % self.ec2_tools_prefix, '--retry', '--manifest', kernel_manifest, '--bucket', self.vm.ec2_bucket, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
-                run_cmd(*bundle_cmdline)
+                upload_cmdline = ['%supload-bundle' % self.ec2_tools_prefix, '--manifest', kernel_manifest, '--bucket', self.vm.ec2_bucket, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
+
+                if self.vm.ec2_s3_url:
+                    upload_cmdline += ['--url', self.vm.ec2_s3_url]
+
+                if self.vm.ec2_cloud_cert:
+                    upload_cmdline += ['--ec2cert', self.vm.ec2_cloud_cert]
+
+                run_cmd(*upload_cmdline)
 
                 if ramdisk_loc != None:
-                    upload_cmdline = ['%supload-bundle' % self.ec2_tools_prefix, '--retry', '--manifest', ramdisk_manifest, '--bucket', self.vm.ec2_bucket, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
-                    run_cmd(*bundle_cmdline)
+                    upload_cmdline = ['%supload-bundle' % self.ec2_tools_prefix, '--manifest', ramdisk_manifest, '--bucket', self.vm.ec2_bucket, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
 
-                if self.vm.ec2.register_kernel:
+                    if self.vm.ec2_s3_url:
+                        upload_cmdline += ['--url', self.vm.ec2_s3_url]
+
+                    if self.vm.ec2_cloud_cert:
+                        upload_cmdline += ['--ec2cert', self.vm.ec2_cloud_cert]
+
+                    run_cmd(*upload_cmdline)
+
+                if self.vm.ec2_register_kernel:
                     logging.info("Registering EC2 kernel bundle")
-                    from boto.ec2.connection import EC2Connection
+                    uploaded_kernel_manifest = '%s/%s.manifest.xml' % (self.vm.ec2_bucket, kernel_name)
+                    register_cmdline = ['%sregister' % self.ec2_tools_prefix, uploaded_kernel_manifest, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
 
-                    #Code added to support Eucalyptus and other EC2-compatible clusters
-                    if self.vm.ec2_url:
-                        import urlparse
-                        parsed_url = urlparse.urlparse(self.vm.ec2_url)
-                        conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key,
-                            host = parsed_url.hostname, port = parsed_url.port, path = parsed_url.path)
-                    else:
-                        conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key)
+                    if self.vm.ec2_s3_url:
+                        register_cmdline += ['--url', self.vm.ec2_s3_url]
 
-                    kernel_id = conn.register_image('%s/%s.manifest.xml' % (self.vm.ec2_bucket, kernel_name))
+                    registered_eki = run_cmd(*register_cmdline)
 
-                    logging.info("EC2 kernel ID: %s" % kernel_id)
-
-                    self.vm.ec2_kernel = kernel_id
+                    self.vm.ec2_kernel = registered_eki.split("\t")[1].strip()
+                    logging.info("EC2 kernel ID: %s" % self.vm.ec2_kernel)
 
                     if ramdisk_loc != None:
-                        ramdisk_id = conn.register_image('%s/%s.manifest.xml' % (self.vm.ec2_bucket, ramdisk_name))
+                        uploaded_ramdisk_manifest = '%s/%s.manifest.xml' % (self.vm.ec2_bucket, ramdisk_name)
 
-                        logging.info("EC2 ramdisk ID: %s" % ramdisk_id)
-                        self.vm.ec2_ramdisk = ramdisk_id
+                        register_cmdline = ['%sregister' % self.ec2_tools_prefix, uploaded_ramdisk_manifest, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
+
+                        if self.vm.ec2_s3_url:
+                            register_cmdline += ['--url', self.vm.ec2_s3_url]
+
+                        registered_eri = run_cmd(*register_cmdline)
+
+                        self.vm.ec2_ramdisk = registered_eri.split("\t")[1].strip()
+                        logging.info("EC2 ramdisk ID: %s" % self.vm.ec2_ramdisk)
+
+#   This is the way we used to do this. Now we just refer to ec2/euca2ools since Boto won't stop choking on my local hostname!!
+#                    from boto.ec2.connection import EC2Connection
+#                    from boto.ec2.regioninfo import RegionInfo
+
+#                    rinfo = None
+#                    if self.vm.ec2_is_eucalyptus: #default boto regioninfo assumes Amazon EC2
+#                        rinfo = RegionInfo(None, "eucalyptus", self.vm.ec2_url)
+
+#                    #Code added to support Eucalyptus and other EC2-compatible clusters
+#                    if self.vm.ec2_url:
+#                        import urlparse
+#                        parsed_url = urlparse.urlparse(self.vm.ec2_url)
+#                        is_secure = False
+
+#                        if parsed_url.scheme == 'https':
+#                            is_secure = True
+
+#                        conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key,
+#                            host = parsed_url.hostname, port = parsed_url.port, path = parsed_url.path,
+#                            is_secure = is_secure, region = rinfo)
+#                    else:
+#                        conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key, region = rinfo)
+
+#                    kernel_id = conn.register_image('%s/%s.manifest.xml' % (self.vm.ec2_bucket, kernel_name))
+
+            else: #No uploading, keep the Mani Manifest
+                self.vm.result_files.append(kernel_manifest)
+
+                if ramdisk_loc != None:
+                    self.vm.result_files.append(ramdisk_manifest)
 
         if not self.vm.ec2_kernel:
             self.vm.ec2_kernel = self.vm.distro.get_ec2_kernel()
-            logging.debug('%s - to be used for AKI.' %(self.vm.ec2_kernel))
+        
+        logging.debug('%s - to be used for AKI.' %(self.vm.ec2_kernel))
 
         if not self.vm.ec2_ramdisk:
             self.vm.ec2_ramdisk = self.vm.distro.ec2_ramdisk_id()
-            logging.debug('%s - to be use for the ARI.' %(self.vm.ec2_ramdisk))
+
+        logging.debug('%s - to be use for the ARI.' %(self.vm.ec2_ramdisk))
 
         if self.vm.ec2_bundle:
             logging.info("Building EC2 bundle")
             bundle_cmdline = ['%sbundle-image' % self.ec2_tools_prefix, '--image', self.vm.filesystems[0].filename, '--cert', self.vm.ec2_cert, '--privatekey', self.vm.ec2_key, '--user', self.vm.ec2_user, '--prefix', self.vm.ec2_name, '-r', ['i386', 'x86_64'][self.vm.arch == 'amd64'], '-d', self.vm.workdir, '--kernel', self.vm.ec2_kernel, '--ramdisk', self.vm.ec2_ramdisk]
+
+            if self.vm.ec2_cloud_cert:
+                bundle_cmdline += ['--ec2cert', self.vm.ec2_cloud_cert]
+
             run_cmd(*bundle_cmdline)
 
             manifest = '%s/%s.manifest.xml' % (self.vm.workdir, self.vm.ec2_name)
             if self.vm.ec2_upload:
                 logging.info("Uploading EC2 bundle")
-                upload_cmdline = ['%supload-bundle' % self.ec2_tools_prefix, '--retry', '--manifest', manifest, '--bucket', self.vm.ec2_bucket, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
+                upload_cmdline = ['%supload-bundle' % self.ec2_tools_prefix, '--manifest', manifest, '--bucket', self.vm.ec2_bucket, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
+
+                if self.vm.ec2_s3_url:
+                    upload_cmdline += ['--s3_url', self.vm.ec2_s3_url]
+
+                if self.vm.ec2_cloud_cert:
+                    upload_cmdline += ['--ec2cert', self.vm.ec2_cloud_cert]
+
                 run_cmd(*upload_cmdline)
 
                 if self.vm.ec2_register:
-                    from boto.ec2.connection import EC2Connection
+                    logging.info("Registering EC2 bundle")
+                    uploaded_image_manifest = '%s/%s.manifest.xml' % (self.vm.ec2_bucket, self.vm.ec2_name)
+                    register_cmdline = ['%sregister' % self.ec2_tools_prefix, uploaded_image_manifest, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
 
-                    #Code added to support Eucalyptus and other EC2-compatible clusters
-                    if self.vm.ec2_url:
-                        import urlparse
-                        parsed_url = urlparse.urlparse(self.vm.ec2_url)
-                        conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key,
-                            host = parsed_url.hostname, port = parsed_url.port, path = parsed_url.path)
-                    else:
-                        conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key)
+                    if self.vm.ec2_s3_url:
+                        register_cmdline += ['--url', self.vm.ec2_s3_url]
 
-                    image_id = conn.register_image('%s/%s.manifest.xml' % (self.vm.ec2_bucket, self.vm.ec2_name))
+                    registered_ami = run_cmd(*register_cmdline)
 
+                    image_id = registered_ami.split("\t")[1].strip()
                     logging.info("EC2 image ID: %s" % image_id)
+                    
+#                   Again, changing strategies call for lots of commented out code
+#                    from boto.ec2.connection import EC2Connection
+#                    from boto.ec2.regioninfo import RegionInfo
+
+#                    rinfo = None
+#                    if self.vm.ec2_is_eucalyptus: #default boto regioninfo assumes Amazon EC2
+#                        rinfo = RegionInfo(None, "eucalyptus", self.vm.ec2_url)
+
+#                    #Code added to support Eucalyptus and other EC2-compatible clusters
+#                    if self.vm.ec2_url:
+#                        import urlparse
+#                        parsed_url = urlparse.urlparse(self.vm.ec2_url)
+#                        is_secure = False
+
+#                        if parsed_url.scheme == 'https':
+#                            is_secure = True
+
+#                        conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key,
+#                            host = parsed_url.hostname, port = parsed_url.port, path = parsed_url.path, is_secure = is_secure, region = rinfo)
+#                    else:
+#                        conn = EC2Connection(self.vm.ec2_access_key, self.vm.ec2_secret_key, region = rinfo)
+
+#                    image_id = conn.register_image('%s/%s.manifest.xml' % (self.vm.ec2_bucket, self.vm.ec2_name))
             else:
                 self.vm.result_files.append(manifest)
         else:

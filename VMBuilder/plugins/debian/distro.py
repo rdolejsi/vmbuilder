@@ -19,7 +19,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import logging
-import os
+import os, os.path
 import socket
 import types
 import VMBuilder
@@ -239,20 +239,54 @@ EOT''')
             return self.xen_ramdisk_path()
 
     def __kernel_path(self):
-        path = '/boot/vmlinuz-%s-%s' % (self.find_linux_kernel(self.suite, flavour = None, arch = self.vm.arch), self.suite.default_flavour[self.vm.arch])
-        return path
+        kernels = run_cmd("ls", "%s/boot/" % self.vm.installdir)
+
+        for kernel in kernels.split("\n"):
+            k_filename_parts = kernel.split("-")
+
+            if k_filename_parts[0] == "vmlinuz":
+                if k_filename_parts[3] in self.suite.valid_flavours[self.vm.arch]:
+                    return "/boot/%s" % kernel
+
+        return None
 
     def __ramdisk_path(self):
-        path = '/boot/initrd.img-%s-%s' % (self.find_linux_kernel(self.suite, flavour = None, arch = self.vm.arch), self.suite.default_flavour[self.vm.arch])
-        return path
+        kernels = run_cmd("ls", "%s/boot/" % self.vm.installdir)
+
+        for kernel in kernels.split("\n"):
+            k_filename_parts = kernel.split("-")
+
+            if k_filename_parts[0] == "initrd.img":
+                if k_filename_parts[3] in self.suite.valid_flavours[self.vm.arch]:
+                    return "/boot/%s" % kernel
+
+        return None
 
     def xen_kernel_path(self):
-        path = '/boot/vmlinuz-%s-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
-        return path
+        kernels = run_cmd("ls", "%s/boot/" % self.vm.installdir)
+
+        for kernel in kernels.split("\n"):
+            k_filename_parts = kernel.split("-")
+
+            if k_filename_parts[0] == "vmlinuz":
+                if k_filename_parts[3] == self.suite.xen_kernel_flavour:
+                    if k_filename_parts[4] in self.suite.valid_flavours[self.vm.arch]:
+                        return "/boot/%s" % kernel
+
+        return None
 
     def xen_ramdisk_path(self):
-        path = '/boot/initrd.img-%s-%s-%s' % (self.xen_kernel_version(), self.suite.xen_kernel_flavour, self.suite.default_flavour[self.vm.arch])
-        return path
+        kernels = run_cmd("ls", "%s/boot/" % self.vm.installdir)
+
+        for kernel in kernels.split("\n"):
+            k_filename_parts = kernel.split("-")
+
+            if k_filename_parts[0] == "initrd.img":
+                if k_filename_parts[3] == self.suite.xen_kernel_flavour:
+                    if k_filename_parts[4] in self.suite.valid_flavours[self.vm.arch]:
+                        return "/boot/%s" % kernel
+
+        return None
 
     def get_ec2_kernel(self):
         if self.suite.ec2_kernel_info:
