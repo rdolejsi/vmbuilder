@@ -231,7 +231,7 @@ class EC2(Plugin):
                     register_cmdline = ['%sregister' % self.ec2_tools_prefix, uploaded_kernel_manifest, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
 
                     if self.vm.ec2_s3_url:
-                        register_cmdline += ['--url', self.vm.ec2_s3_url]
+                        register_cmdline += ['--url', self.vm.ec2_url]
 
                     registered_eki = run_cmd(*register_cmdline)
 
@@ -244,7 +244,7 @@ class EC2(Plugin):
                         register_cmdline = ['%sregister' % self.ec2_tools_prefix, uploaded_ramdisk_manifest, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
 
                         if self.vm.ec2_s3_url:
-                            register_cmdline += ['--url', self.vm.ec2_s3_url]
+                            register_cmdline += ['--url', self.vm.ec2_url]
 
                         registered_eri = run_cmd(*register_cmdline)
 
@@ -307,7 +307,7 @@ class EC2(Plugin):
                 upload_cmdline = ['%supload-bundle' % self.ec2_tools_prefix, '--manifest', manifest, '--bucket', self.vm.ec2_bucket, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
 
                 if self.vm.ec2_s3_url:
-                    upload_cmdline += ['--s3_url', self.vm.ec2_s3_url]
+                    upload_cmdline += ['--url', self.vm.ec2_s3_url]
 
                 if self.vm.ec2_cloud_cert:
                     upload_cmdline += ['--ec2cert', self.vm.ec2_cloud_cert]
@@ -320,7 +320,7 @@ class EC2(Plugin):
                     register_cmdline = ['%sregister' % self.ec2_tools_prefix, uploaded_image_manifest, '--access-key', self.vm.ec2_access_key, '--secret-key', self.vm.ec2_secret_key]
 
                     if self.vm.ec2_s3_url:
-                        register_cmdline += ['--url', self.vm.ec2_s3_url]
+                        register_cmdline += ['--url', self.vm.ec2_url]
 
                     registered_ami = run_cmd(*register_cmdline)
 
