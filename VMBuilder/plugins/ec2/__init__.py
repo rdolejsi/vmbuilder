@@ -59,10 +59,10 @@ class EC2(Plugin):
 
         #NOW, actually check if we can do EC2. Also check if we can take advantage of Euca's KVM support
         if not isinstance(self.vm.hypervisor, VMBuilder.plugins.xen.Xen):
-            if not (self.vm.ec2_is_eucalyptus and isinstance(self.vm.hypervisor, VMBuilder.plugins.kvm.vm.KVM)):
-                raise VMBuilderUserError("You must use either Xen or KVM on Eucalyptus")
-            else:
+            if not self.vm.ec2_is_eucalyptus:
                 raise VMBuilderUserError("You must use Xen on EC2")
+            elif not isinstance(self.vm.hypervisor, VMBuilder.plugins.kvm.vm.KVM):
+                raise VMBuilderUserError("You must use either Xen or KVM on Eucalyptus")
 
         if self.vm.ec2_no_amazon_tools:
             logging.info("Not using Amazon ec2-tools.")
@@ -99,9 +99,6 @@ class EC2(Plugin):
 
         if self.ec2_tools_prefix:
             logging.info("Using EC2 tools prefix: %s" % self.ec2_tools_prefix)
-
-        if not self.vm.hypervisor.name == 'Xen':
-            raise VMBuilderUserError('When building for EC2 you must use the xen hypervisor.')
 
         if self.vm.ec2_bundle:
             if not self.vm.ec2_name:
